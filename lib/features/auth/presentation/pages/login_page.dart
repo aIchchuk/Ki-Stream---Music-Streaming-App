@@ -58,8 +58,8 @@ class _LoginPageState extends State<LoginPage> {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        Colors.purple.withOpacity(0.3),
-                        Colors.blue.withOpacity(0.1),
+                        Colors.purple.withValues(alpha: 0.3),
+                        Colors.blue.withValues(alpha: 0.1),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -183,7 +183,9 @@ class _LoginPageState extends State<LoginPage> {
                               color: Colors.white,
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.1),
+                              backgroundColor: Colors.white.withValues(
+                                alpha: 0.1,
+                              ),
                               elevation: 0,
                               side: const BorderSide(color: Colors.grey),
                               shape: RoundedRectangleBorder(

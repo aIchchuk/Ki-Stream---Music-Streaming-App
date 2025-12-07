@@ -7,7 +7,10 @@ import '../../features/home/presentation/pages/main_shell.dart';
 import '../../features/library/presentation/pages/library_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/admin_dashboard_page.dart';
+import '../../features/music/presentation/pages/add_song_page.dart';
+import '../../features/music/presentation/pages/player_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
+import '../../features/music/data/models/song_model.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
@@ -19,10 +22,21 @@ final GoRouter appRouter = GoRouter(
   routes: [
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
     GoRoute(path: '/signup', builder: (context, state) => const SignUpPage()),
+    GoRoute(
+      path: '/add-song',
+      builder: (context, state) => const AddSongPage(),
+    ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => MainShell(child: child),
       routes: [
+        GoRoute(
+          path: '/player',
+          builder: (context, state) {
+            final song = state.extra as SongModel;
+            return PlayerPage(song: song);
+          },
+        ),
         GoRoute(path: '/home', builder: (context, state) => const HomePage()),
         GoRoute(
           path: '/search',

@@ -63,8 +63,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        Colors.purple.withOpacity(0.3),
-                        Colors.blue.withOpacity(0.1),
+                        Colors.purple.withValues(alpha: 0.3),
+                        Colors.blue.withValues(alpha: 0.1),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,

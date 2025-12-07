@@ -20,28 +20,21 @@ class _MainBottomNav extends StatelessWidget {
     return BottomNavigationBar(
       backgroundColor: Colors.black,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.white,
+      selectedItemColor: const Color(0xFF8B80F9), // Purple accent for selection
       unselectedItemColor: Colors.grey,
       currentIndex: _currentIndex(context),
       onTap: (index) => _onTap(context, index),
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark_outline),
-          label: 'Library',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Library'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
   }
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-
     if (location.startsWith('/search')) return 1;
     if (location.startsWith('/library')) return 2;
     if (location.startsWith('/profile')) return 3;

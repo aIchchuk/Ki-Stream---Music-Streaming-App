@@ -145,7 +145,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _selectedTabIndex == 0
-                                        ? Colors.white.withOpacity(0.1)
+                                        ? Colors.white.withValues(alpha: 0.1)
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -173,7 +173,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: _selectedTabIndex == 1
-                                        ? Colors.white.withOpacity(0.1)
+                                        ? Colors.white.withValues(alpha: 0.1)
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
@@ -326,11 +326,11 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ElevatedButton(
             onPressed: () => _showDeleteAccountConfirmation(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.withOpacity(0.1),
+              backgroundColor: Colors.red.withValues(alpha: 0.1),
               foregroundColor: Colors.red,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
-                side: BorderSide(color: Colors.red.withOpacity(0.5)),
+                side: BorderSide(color: Colors.red.withValues(alpha: 0.5)),
               ),
             ),
             child: const Text("Delete Account"),
@@ -484,7 +484,7 @@ class _ProfilePageState extends State<ProfilePage> {
               context.read<AuthBloc>().add(SignOut());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.withOpacity(0.2),
+              backgroundColor: Colors.red.withValues(alpha: 0.2),
               foregroundColor: Colors.red,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
@@ -552,6 +552,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildDivider() {
-    return Divider(color: Colors.white.withOpacity(0.1), height: 1);
+    return Divider(color: Colors.white.withValues(alpha: 0.1), height: 1);
   }
 }

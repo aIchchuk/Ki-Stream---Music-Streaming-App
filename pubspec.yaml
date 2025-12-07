@@ -42,6 +42,11 @@ dependencies:
   hive_flutter: ^1.1.0
   get_it: ^9.2.0
   google_sign_in: ^6.2.1
+  cached_network_image: ^3.4.1
+  file_picker: ^10.3.8
+  equatable: ^2.0.7
+  just_audio: ^0.9.42
+  rxdart: ^0.28.0
 
 dev_dependencies:
   flutter_test:
