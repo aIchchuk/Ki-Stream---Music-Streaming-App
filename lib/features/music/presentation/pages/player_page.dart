@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/models/song_model.dart';
 import '../bloc/player_bloc.dart';
+import '../bloc/song_bloc.dart';
 
 class PlayerPage extends StatelessWidget {
   final SongModel song;
@@ -128,12 +129,16 @@ class PlayerPage extends StatelessWidget {
                           label: "Like",
                           color: purpleAccent,
                           onTap: () {
-                            final bloc = context.read<PlayerBloc>();
-                            bloc.add(
+                            // Instant UI feedback via PlayerBloc
+                            context.read<PlayerBloc>().add(
                               UpdateFavoriteStatus(
                                 currentSong.id,
                                 !(currentSong.isFavorite ?? false),
                               ),
+                            );
+                            // Persist to Hive via SongBloc
+                            context.read<SongBloc>().add(
+                              ToggleFavorite(currentSong),
                             );
                           },
                         ),

@@ -9,6 +9,7 @@ import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/admin_dashboard_page.dart';
 import '../../features/music/presentation/pages/add_song_page.dart';
 import '../../features/music/presentation/pages/player_page.dart';
+import '../../features/library/presentation/pages/favorites_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/music/data/models/song_model.dart';
 
@@ -49,6 +50,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/profile',
           builder: (context, state) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: '/favorites',
+          builder: (context, state) => const FavoritesPage(),
         ),
         GoRoute(
           path: '/admin-dashboard',

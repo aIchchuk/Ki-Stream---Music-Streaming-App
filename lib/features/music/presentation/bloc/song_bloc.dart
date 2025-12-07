@@ -12,6 +12,11 @@ class AddSong extends SongEvent {
   AddSong(this.song);
 }
 
+class ToggleFavorite extends SongEvent {
+  final SongModel song;
+  ToggleFavorite(this.song);
+}
+
 // States
 abstract class SongState {}
 
@@ -47,6 +52,16 @@ class SongBloc extends Bloc<SongEvent, SongState> {
     on<AddSong>((event, emit) async {
       try {
         await _songRepository.addSong(event.song);
+        final songs = await _songRepository.getSongs();
+        emit(SongLoaded(songs));
+      } catch (e) {
+        emit(SongError(e.toString()));
+      }
+    });
+
+    on<ToggleFavorite>((event, emit) async {
+      try {
+        await _songRepository.toggleFavorite(event.song);
         final songs = await _songRepository.getSongs();
         emit(SongLoaded(songs));
       } catch (e) {
