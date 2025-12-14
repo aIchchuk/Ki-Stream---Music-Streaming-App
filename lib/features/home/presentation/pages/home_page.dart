@@ -43,89 +43,65 @@ class _HomePageState extends State<HomePage> {
               const FeelingWidget(),
               const SizedBox(height: 30),
 
-              // Trending / Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Trending Songs",
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.queue_music_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () {
-                      context.push('/add-song');
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              _buildTrendingSongsSection(context),
-              const SizedBox(height: 30),
-
-              // Newly Added Songs
-              Text(
-                "Newly Added Songs",
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 15),
               BlocBuilder<SongBloc, SongState>(
                 builder: (context, state) {
                   if (state is SongLoading) {
                     return const Center(child: CircularProgressIndicator());
                   } else if (state is SongLoaded) {
-                    final manualSongs = state.songs
+                    final allSongs = state.songs;
+                    final manualSongs = allSongs
                         .where((s) => s.isManual == true)
                         .toList();
-                    if (manualSongs.isEmpty) {
-                      return const Text(
-                        "No manual songs added yet.",
-                        style: TextStyle(color: Colors.grey),
-                      );
-                    }
-                    return SizedBox(
-                      height: 160,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: manualSongs.length,
-                        itemBuilder: (context, index) {
-                          final song = manualSongs[index];
-                          return SongCard(
-                            songImage: song.songImage,
-                            songName: song.songName,
-                            onTap: () {
-                              context.read<PlayerBloc>().add(
-                                PlaySong(song, queue: manualSongs),
-                              );
-                              context.push('/player', extra: song);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Newly Added Songs Section
+                        _buildSectionHeader(
+                          context,
+                          "Newly Added Songs",
+                          action: IconButton(
+                            icon: const Icon(
+                              Icons.add_circle_outline,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            onPressed: () {
+                              context.push('/add-song');
                             },
-                          );
-                        },
-                      ),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        _buildSongList(
+                          manualSongs,
+                          "No manual songs added yet.",
+                        ),
+                        const SizedBox(height: 30),
+
+                        // Made for You Section
+                        _buildSectionHeader(context, "Made for You"),
+                        const SizedBox(height: 15),
+                        _buildRandomSongList(allSongs),
+                        const SizedBox(height: 30),
+
+                        // Today's Picks Section
+                        _buildSectionHeader(context, "Today's Picks"),
+                        const SizedBox(height: 15),
+                        _buildRandomSongList(allSongs),
+                        const SizedBox(height: 20),
+                      ],
                     );
                   } else if (state is SongError) {
-                    return Text(
-                      "Error: ${state.message}",
-                      style: const TextStyle(color: Colors.red),
+                    return Center(
+                      child: Text(
+                        "Error: ${state.message}",
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     );
                   }
-                  return const Text(
-                    "No manual songs added yet.",
-                    style: TextStyle(color: Colors.grey),
-                  );
+                  return const SizedBox.shrink();
                 },
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -133,88 +109,75 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildTrendingSongsSection(BuildContext context) {
-    // Create the trending songs list
-    final trendingSongs = [
-      SongModel(
-        id: "4",
-        songName: "Dreaming",
-        artistName: "Dream Artist",
-        songImage: "https://picsum.photos/200/200?random=4",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    Widget? action,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        if (action != null) action,
+      ],
+    );
+  }
+
+  Widget _buildSongList(List<SongModel> songs, String emptyMessage) {
+    if (songs.isEmpty) {
+      return Text(emptyMessage, style: const TextStyle(color: Colors.grey));
+    }
+    return SizedBox(
+      height: 160,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: songs.length,
+        itemBuilder: (context, index) {
+          final song = songs[index];
+          return SongCard(
+            songImage: song.songImage,
+            songName: song.songName,
+            onTap: () {
+              context.read<PlayerBloc>().add(PlaySong(song, queue: songs));
+              context.push('/player', extra: song);
+            },
+          );
+        },
       ),
-      SongModel(
-        id: "5",
-        songName: "Peace",
-        artistName: "Peace Artist",
-        songImage: "https://picsum.photos/200/200?random=5",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-      SongModel(
-        id: "6",
-        songName: "Enjoy World",
-        artistName: "World Artist",
-        songImage: "https://picsum.photos/200/200?random=6",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-      SongModel(
-        id: "13",
-        songName: "As It Was",
-        artistName: "Harry Styles",
-        songImage: "https://picsum.photos/200/200?random=13",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-      SongModel(
-        id: "14",
-        songName: "Anti-Hero",
-        artistName: "Taylor Swift",
-        songImage: "https://picsum.photos/200/200?random=14",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-      SongModel(
-        id: "15",
-        songName: "Flowers",
-        artistName: "Miley Cyrus",
-        songImage: "https://picsum.photos/200/200?random=15",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-      SongModel(
-        id: "16",
-        songName: "Calm Down",
-        artistName: "Rema & Selena Gomez",
-        songImage: "https://picsum.photos/200/200?random=16",
-        audioFile:
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        dateAdded: DateTime.now(),
-      ),
-    ];
+    );
+  }
+
+  Widget _buildRandomSongList(List<SongModel> allSongs) {
+    if (allSongs.isEmpty) {
+      return const Text(
+        "No songs available.",
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    // Shuffle and pick 5
+    final randomSongs = List<SongModel>.from(allSongs)..shuffle();
+    final pickedSongs = randomSongs.take(5).toList();
 
     return SizedBox(
       height: 160,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: trendingSongs.length,
+        itemCount: pickedSongs.length,
         itemBuilder: (context, index) {
-          final song = trendingSongs[index];
+          final song = pickedSongs[index];
           return SongCard(
             songImage: song.songImage,
             songName: song.songName,
             onTap: () {
-              // Play this song with the full trending queue
               context.read<PlayerBloc>().add(
-                PlaySong(song, queue: trendingSongs),
+                PlaySong(song, queue: pickedSongs),
               );
               context.push('/player', extra: song);
             },
