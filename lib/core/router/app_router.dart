@@ -8,8 +8,12 @@ import '../../features/library/presentation/pages/library_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/admin_dashboard_page.dart';
 import '../../features/music/presentation/pages/add_song_page.dart';
+import '../../features/music/presentation/pages/create_playlist_page.dart';
+import '../../features/music/presentation/pages/playlist_detail_page.dart';
 import '../../features/music/presentation/pages/player_page.dart';
+import '../../features/music/data/models/playlist_model.dart';
 import '../../features/library/presentation/pages/favorites_page.dart';
+import '../../features/library/presentation/pages/playlists_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/music/data/models/song_model.dart';
 
@@ -58,6 +62,21 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/admin-dashboard',
           builder: (context, state) => const AdminDashboardPage(),
+        ),
+        GoRoute(
+          path: '/playlists',
+          builder: (context, state) => const PlaylistsPage(),
+        ),
+        GoRoute(
+          path: '/create-playlist',
+          builder: (context, state) => const CreatePlaylistPage(),
+        ),
+        GoRoute(
+          path: '/playlist-detail',
+          builder: (context, state) {
+            final playlist = state.extra as PlaylistModel;
+            return PlaylistDetailPage(playlist: playlist);
+          },
         ),
       ],
     ),

@@ -76,13 +76,13 @@ class _HomePageState extends State<HomePage> {
                           manualSongs,
                           "No manual songs added yet.",
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 10),
 
                         // Made for You Section
                         _buildSectionHeader(context, "Made for You"),
                         const SizedBox(height: 15),
                         _buildRandomSongList(allSongs),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 10),
 
                         // Today's Picks Section
                         _buildSectionHeader(context, "Today's Picks"),

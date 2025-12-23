@@ -26,7 +26,7 @@ class _LibraryPageState extends State<LibraryPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,6 +52,7 @@ class _LibraryPageState extends State<LibraryPage> {
                   _buildQuickAction(
                     icon: Icons.playlist_play_rounded,
                     label: "Playlists",
+                    onTap: () => context.push('/playlists'),
                   ),
                   _buildQuickAction(
                     icon: Icons.favorite_border_rounded,
@@ -72,46 +73,48 @@ class _LibraryPageState extends State<LibraryPage> {
               ),
               const SizedBox(height: 25),
 
-              // Recently Added List
-              BlocBuilder<SongBloc, SongState>(
-                builder: (context, state) {
-                  if (state is SongLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (state is SongLoaded) {
-                    final manualSongs = state.songs
-                        .where((s) => s.isManual == true)
-                        .toList();
+              // Recently Added List - Scrollable
+              Expanded(
+                child: BlocBuilder<SongBloc, SongState>(
+                  builder: (context, state) {
+                    if (state is SongLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (state is SongLoaded) {
+                      final manualSongs = state.songs
+                          .where((s) => s.isManual == true)
+                          .toList();
 
-                    if (manualSongs.isEmpty) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.only(top: 40),
+                      if (manualSongs.isEmpty) {
+                        return const Center(
                           child: Text(
                             "No manual songs added yet.",
                             style: TextStyle(color: Colors.grey),
                           ),
-                        ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: manualSongs.length,
+                        physics: const BouncingScrollPhysics(),
+                        itemBuilder: (context, index) {
+                          final song = manualSongs[index];
+                          return _buildRecentlyStreamedItem(
+                            image: song.songImage,
+                            title: song.songName,
+                            artist: song.artistName,
+                            onTap: () {
+                              context.read<PlayerBloc>().add(
+                                PlaySong(song, queue: manualSongs),
+                              );
+                              context.push('/player', extra: song);
+                            },
+                          );
+                        },
                       );
                     }
-
-                    return Column(
-                      children: manualSongs.map((song) {
-                        return _buildRecentlyStreamedItem(
-                          image: song.songImage,
-                          title: song.songName,
-                          artist: song.artistName,
-                          onTap: () {
-                            context.read<PlayerBloc>().add(
-                              PlaySong(song, queue: manualSongs),
-                            );
-                            context.push('/player', extra: song);
-                          },
-                        );
-                      }).toList(),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
+                    return const SizedBox.shrink();
+                  },
+                ),
               ),
             ],
           ),

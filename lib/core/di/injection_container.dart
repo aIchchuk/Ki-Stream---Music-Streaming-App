@@ -11,6 +11,10 @@ import '../../features/music/data/models/song_model.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../features/music/data/models/playlist_model.dart';
+import '../../features/music/domain/repositories/playlist_repository.dart';
+import '../../features/music/data/repositories/playlist_repository_impl.dart';
+import '../../features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -21,13 +25,15 @@ Future<void> init() async {
 
   Hive.registerAdapter(UserModelAdapter());
   Hive.registerAdapter(SongModelAdapter());
+  Hive.registerAdapter(PlaylistModelAdapter());
 
   final userBox = await Hive.openBox<UserModel>('user');
   final usersDbBox = await Hive.openBox('users_db');
   final songsBox = await Hive.openBox<SongModel>('songs');
+  final playlistsBox = await Hive.openBox<PlaylistModel>('playlists');
 
   debugPrint(
-    'Hive Boxes opened. Session: ${userBox.length}, DB Users: ${usersDbBox.length}',
+    'Hive Boxes opened. Session: ${userBox.length}, DB Users: ${usersDbBox.length}, Playlists: ${playlistsBox.length}',
   );
 
   // External
@@ -43,6 +49,10 @@ Future<void> init() async {
 
   // Features - Music
   sl.registerLazySingleton<SongRepository>(() => SongRepositoryImpl(songsBox));
+  sl.registerLazySingleton<PlaylistRepository>(
+    () => PlaylistRepositoryImpl(playlistsBox),
+  );
   sl.registerFactory(() => SongBloc(sl()));
   sl.registerFactory(() => PlayerBloc());
+  sl.registerFactory(() => PlaylistBloc(sl()));
 }

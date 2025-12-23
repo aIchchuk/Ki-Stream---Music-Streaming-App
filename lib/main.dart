@@ -5,6 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/music/presentation/bloc/song_bloc.dart';
 import 'features/music/presentation/bloc/player_bloc.dart';
+import 'features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 import 'core/di/injection_container.dart' as di;
 
 void main() async {
@@ -25,6 +26,9 @@ class KiStreamApp extends StatelessWidget {
         ),
         BlocProvider(create: (context) => di.sl<SongBloc>()..add(LoadSongs())),
         BlocProvider(create: (context) => di.sl<PlayerBloc>()),
+        BlocProvider(
+          create: (context) => di.sl<PlaylistBloc>()..add(LoadPlaylists()),
+        ),
       ],
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
