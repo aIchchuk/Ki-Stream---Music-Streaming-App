@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
+import '../../../shared/widgets/song_image.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -64,7 +63,7 @@ class _LibraryPageState extends State<LibraryPage> {
               const SizedBox(height: 20),
 
               const Text(
-                "Recently Added",
+                "Recently Added Songs",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -168,10 +167,7 @@ class _LibraryPageState extends State<LibraryPage> {
         margin: const EdgeInsets.only(bottom: 25),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _buildSongImage(image),
-            ),
+            SongImage(imageUrl: image, width: 90, height: 90, borderRadius: 12),
             const SizedBox(width: 25),
             Expanded(
               child: Column(
@@ -197,31 +193,5 @@ class _LibraryPageState extends State<LibraryPage> {
         ),
       ),
     );
-  }
-
-  Widget _buildSongImage(String path) {
-    if (path.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: path,
-        width: 90,
-        height: 90,
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => Image.network(
-          "https://picsum.photos/200/200?random=error",
-          width: 90,
-          height: 90,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (File(path).existsSync()) {
-      return Image.file(File(path), width: 90, height: 90, fit: BoxFit.cover);
-    } else {
-      return Image.network(
-        "https://picsum.photos/200/200?random=error",
-        width: 90,
-        height: 90,
-        fit: BoxFit.cover,
-      );
-    }
   }
 }

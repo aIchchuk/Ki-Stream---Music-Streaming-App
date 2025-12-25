@@ -5,6 +5,8 @@ import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist
 import '../../../../core/theme/app_theme.dart';
 import 'dart:io';
 import '../../../../features/music/data/models/playlist_model.dart';
+import '../../../../features/music/presentation/bloc/song_bloc.dart';
+import '../../../../features/music/presentation/bloc/player_bloc.dart';
 
 class PlaylistsPage extends StatelessWidget {
   const PlaylistsPage({super.key});
@@ -189,16 +191,43 @@ class PlaylistsPage extends StatelessWidget {
                   Positioned(
                     bottom: 10,
                     right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 24,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Play playlist
+                        final songState = context.read<SongBloc>().state;
+                        if (songState is SongLoaded) {
+                          final playlistSongs = songState.songs
+                              .where((s) => playlist.songIds.contains(s.id))
+                              .toList();
+
+                          if (playlistSongs.isNotEmpty) {
+                            context.read<PlayerBloc>().add(
+                              PlaySong(
+                                playlistSongs.first,
+                                queue: playlistSongs,
+                              ),
+                            );
+                            context.push('/player', extra: playlistSongs.first);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("No songs in this playlist"),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
                   ),
@@ -218,14 +247,17 @@ class PlaylistsPage extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+
         const SizedBox(height: 4),
         Text(
-          "Playlist • $count songs",
+          "By ${playlist.creatorName ?? 'Unknown'}",
           style: TextStyle(
             color: Colors.grey[400],
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

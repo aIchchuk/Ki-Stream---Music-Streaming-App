@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
+import '../../../shared/widgets/song_image.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -143,9 +142,11 @@ class _SearchPageState extends State<SearchPage> {
                               margin: const EdgeInsets.only(bottom: 16),
                               child: Row(
                                 children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: _buildSongImage(song.songImage),
+                                  SongImage(
+                                    imageUrl: song.songImage,
+                                    width: 60,
+                                    height: 60,
+                                    borderRadius: 8,
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
@@ -276,31 +277,5 @@ class _SearchPageState extends State<SearchPage> {
         ],
       ),
     );
-  }
-
-  Widget _buildSongImage(String path) {
-    if (path.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: path,
-        width: 60,
-        height: 60,
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => Image.network(
-          "https://picsum.photos/200/200?random=error",
-          width: 60,
-          height: 60,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (File(path).existsSync()) {
-      return Image.file(File(path), width: 60, height: 60, fit: BoxFit.cover);
-    } else {
-      return Image.network(
-        "https://picsum.photos/200/200?random=error",
-        width: 60,
-        height: 60,
-        fit: BoxFit.cover,
-      );
-    }
   }
 }

@@ -1,11 +1,10 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
+import '../../../shared/widgets/song_image.dart';
 
 class FavoritesPage extends StatelessWidget {
   const FavoritesPage({super.key});
@@ -69,9 +68,11 @@ class FavoritesPage extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 25),
                       child: Row(
                         children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: _buildSongImage(song.songImage),
+                          SongImage(
+                            imageUrl: song.songImage,
+                            width: 70,
+                            height: 70,
+                            borderRadius: 12,
                           ),
                           const SizedBox(width: 25),
                           Expanded(
@@ -114,31 +115,5 @@ class FavoritesPage extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildSongImage(String path) {
-    if (path.startsWith('http')) {
-      return CachedNetworkImage(
-        imageUrl: path,
-        width: 70,
-        height: 70,
-        fit: BoxFit.cover,
-        errorWidget: (context, url, error) => Image.network(
-          "https://picsum.photos/200/200?random=error",
-          width: 70,
-          height: 70,
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (File(path).existsSync()) {
-      return Image.file(File(path), width: 70, height: 70, fit: BoxFit.cover);
-    } else {
-      return Image.network(
-        "https://picsum.photos/200/200?random=error",
-        width: 70,
-        height: 70,
-        fit: BoxFit.cover,
-      );
-    }
   }
 }

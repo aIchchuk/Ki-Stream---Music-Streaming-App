@@ -23,13 +23,15 @@ class PlaylistModelAdapter extends TypeAdapter<PlaylistModel> {
       songIds: (fields[3] as List).cast<String>(),
       dateCreated: fields[4] as DateTime,
       imagePath: fields[5] as String?,
+      creatorId: fields[6] as String?,
+      creatorName: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PlaylistModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +43,11 @@ class PlaylistModelAdapter extends TypeAdapter<PlaylistModel> {
       ..writeByte(4)
       ..write(obj.dateCreated)
       ..writeByte(5)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      ..writeByte(6)
+      ..write(obj.creatorId)
+      ..writeByte(7)
+      ..write(obj.creatorName);
   }
 
   @override

@@ -1,0 +1,35 @@
+﻿Analyzing kistream...                                           
+
+  error - Target of URI doesn't exist: '../../shared/widgets/song_image.dart' - lib\features\library\presentation\pages\favorites_page.dart:7:8 - uri_does_not_exist
+  error - The method 'SongImage' isn't defined for the type 'FavoritesPage' - lib\features\library\presentation\pages\favorites_page.dart:71:27 - undefined_method
+  error - Target of URI doesn't exist: '../../shared/widgets/song_image.dart' - lib\features\library\presentation\pages\library_page.dart:7:8 - uri_does_not_exist
+  error - The method 'SongImage' isn't defined for the type '_LibraryPageState' - lib\features\library\presentation\pages\library_page.dart:170:13 - undefined_method
+  error - Target of URI doesn't exist: '../../shared/widgets/song_image.dart' - lib\features\music\presentation\pages\player_page.dart:6:8 - uri_does_not_exist
+  error - Undefined name 'SongImage' - lib\features\music\presentation\pages\player_page.dart:85:38 - undefined_identifier
+  error - Target of URI doesn't exist: '../../shared/widgets/song_image.dart' - lib\features\profile\presentation\pages\admin_dashboard_page.dart:10:8 - uri_does_not_exist
+  error - The method 'SongImage' isn't defined for the type '_AdminDashboardPageState' - lib\features\profile\presentation\pages\admin_dashboard_page.dart:376:26 - undefined_method
+  error - Target of URI doesn't exist: '../../shared/widgets/song_image.dart' - lib\features\search\presentation\pages\search_page.dart:7:8 - uri_does_not_exist
+  error - The method 'SongImage' isn't defined for the type '_SearchPageState' - lib\features\search\presentation\pages\search_page.dart:145:35 - undefined_method
+
+flutter : 10 
+issues found. (ran 
+in 3.1s)
+At line:1 char:1
++ flutter analyze 
+> analysis_output.t
+xt 2>&1
++ ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo 
+             : No  
+  tSpecified: (1   
+ 0 issues found    
+. (ran in 3.1s    
+):String) [],     
+RemoteExceptio    n
+    + FullyQualifi 
+   edErrorId : Na  
+  tiveCommandErr   
+ or
+ 

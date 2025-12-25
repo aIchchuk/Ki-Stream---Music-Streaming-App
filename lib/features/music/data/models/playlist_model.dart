@@ -22,6 +22,12 @@ class PlaylistModel extends HiveObject {
   @HiveField(5)
   final String? imagePath;
 
+  @HiveField(6)
+  final String? creatorId;
+
+  @HiveField(7)
+  final String? creatorName;
+
   PlaylistModel({
     required this.id,
     required this.name,
@@ -29,6 +35,8 @@ class PlaylistModel extends HiveObject {
     required this.songIds,
     required this.dateCreated,
     this.imagePath,
+    this.creatorId,
+    this.creatorName,
   });
 
   PlaylistModel copyWith({
@@ -38,6 +46,8 @@ class PlaylistModel extends HiveObject {
     List<String>? songIds,
     DateTime? dateCreated,
     String? imagePath,
+    String? creatorId,
+    String? creatorName,
   }) {
     return PlaylistModel(
       id: id ?? this.id,
@@ -46,6 +56,8 @@ class PlaylistModel extends HiveObject {
       songIds: songIds ?? this.songIds,
       dateCreated: dateCreated ?? this.dateCreated,
       imagePath: imagePath ?? this.imagePath,
+      creatorId: creatorId ?? this.creatorId,
+      creatorName: creatorName ?? this.creatorName,
     );
   }
 }

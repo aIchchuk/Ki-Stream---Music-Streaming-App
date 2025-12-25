@@ -8,8 +8,9 @@ import '../../../../core/theme/app_theme.dart';
 import '../../data/models/playlist_model.dart';
 import '../bloc/playlist_bloc/playlist_bloc.dart';
 import '../bloc/song_bloc.dart';
-// ignore: unused_import
-import '../../data/models/song_model.dart';
+import '../../../shared/widgets/song_image.dart';
+
+import '../../../../features/auth/presentation/bloc/auth_bloc.dart';
 
 class CreatePlaylistPage extends StatefulWidget {
   const CreatePlaylistPage({super.key});
@@ -50,6 +51,15 @@ class _CreatePlaylistPageState extends State<CreatePlaylistPage> {
       final name = _nameController.text.trim();
       final mood = _moodController.text.trim();
 
+      final authState = context.read<AuthBloc>().state;
+      String creatorId = 'unknown';
+      String creatorName = 'Unknown User';
+
+      if (authState is Authenticated) {
+        creatorId = authState.user.id;
+        creatorName = authState.user.displayName;
+      }
+
       final playlist = PlaylistModel(
         id: const Uuid().v4(),
         name: name,
@@ -57,6 +67,8 @@ class _CreatePlaylistPageState extends State<CreatePlaylistPage> {
         songIds: _selectedSongIds.toList(),
         dateCreated: DateTime.now(),
         imagePath: _imagePath,
+        creatorId: creatorId,
+        creatorName: creatorName,
       );
 
       context.read<PlaylistBloc>().add(CreatePlaylist(playlist));
@@ -280,19 +292,11 @@ class _CreatePlaylistPageState extends State<CreatePlaylistPage> {
                                 song.id,
                               );
                               return ListTile(
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    song.songImage,
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      color: Colors.grey,
-                                      width: 50,
-                                      height: 50,
-                                    ),
-                                  ),
+                                leading: SongImage(
+                                  imageUrl: song.songImage,
+                                  width: 50,
+                                  height: 50,
+                                  borderRadius: 8,
                                 ),
                                 title: Text(
                                   song.songName,

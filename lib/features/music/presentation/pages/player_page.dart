@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../data/models/song_model.dart';
+import '../../../shared/widgets/song_image.dart';
 import '../bloc/player_bloc.dart';
 import '../bloc/song_bloc.dart';
 
@@ -82,7 +81,9 @@ class PlayerPage extends StatelessWidget {
                               ),
                             ],
                             image: DecorationImage(
-                              image: _getImageProvider(currentSong.songImage),
+                              image: SongImage.getImageProvider(
+                                currentSong.songImage,
+                              ),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -237,11 +238,15 @@ class PlayerPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Icon(Icons.shuffle, color: purpleAccent, size: 22),
+                        const Icon(
+                          Icons.shuffle,
+                          color: Color(0xFF8B80F9),
+                          size: 22,
+                        ),
                         IconButton(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.skip_previous,
-                            color: purpleAccent,
+                            color: Color(0xFF8B80F9),
                             size: 32,
                           ),
                           onPressed: () =>
@@ -253,8 +258,8 @@ class PlayerPage extends StatelessWidget {
                           child: Container(
                             height: 60,
                             width: 60,
-                            decoration: BoxDecoration(
-                              color: purpleAccent,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF8B80F9),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -265,15 +270,19 @@ class PlayerPage extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(
+                          icon: const Icon(
                             Icons.skip_next,
-                            color: purpleAccent,
+                            color: Color(0xFF8B80F9),
                             size: 32,
                           ),
                           onPressed: () =>
                               context.read<PlayerBloc>().add(PlayNext()),
                         ),
-                        Icon(Icons.download, color: purpleAccent, size: 22),
+                        const Icon(
+                          Icons.download,
+                          color: Color(0xFF8B80F9),
+                          size: 22,
+                        ),
                       ],
                     ),
                   ],
@@ -309,15 +318,5 @@ class PlayerPage extends StatelessWidget {
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
-  }
-
-  ImageProvider _getImageProvider(String songImage) {
-    if (songImage.startsWith('http')) {
-      return CachedNetworkImageProvider(songImage);
-    } else if (File(songImage).existsSync()) {
-      return FileImage(File(songImage));
-    } else {
-      return const NetworkImage("https://picsum.photos/400/400?random=0");
-    }
   }
 }

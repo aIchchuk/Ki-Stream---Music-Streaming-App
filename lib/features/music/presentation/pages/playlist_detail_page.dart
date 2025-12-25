@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/playlist_model.dart';
-import '../../data/models/song_model.dart';
+
 import '../bloc/player_bloc.dart';
 import '../bloc/song_bloc.dart';
+import '../../data/models/song_model.dart';
+import '../../../shared/widgets/song_image.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   final PlaylistModel playlist;
@@ -65,6 +67,14 @@ class PlaylistDetailPage extends StatelessWidget {
                                 color: Colors.white.withValues(alpha: 0.8),
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "- ${playlist.creatorName ?? 'Unknown'}",
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -105,23 +115,122 @@ class PlaylistDetailPage extends StatelessWidget {
                   );
                 }
 
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 20,
+                    ),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${playlistSongs.length} songs",
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "By ${playlist.creatorName ?? 'Unknown'}",
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        // Shuffle Button
+                        IconButton(
+                          onPressed: () {
+                            final shuffledSongs = List<SongModel>.from(
+                              playlistSongs,
+                            )..shuffle();
+                            if (shuffledSongs.isNotEmpty) {
+                              context.read<PlayerBloc>().add(
+                                PlaySong(
+                                  shuffledSongs.first,
+                                  queue: shuffledSongs,
+                                ),
+                              );
+                              context.push(
+                                '/player',
+                                extra: shuffledSongs.first,
+                              );
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.shuffle,
+                            color: Colors.grey,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Main Play Button
+                        GestureDetector(
+                          onTap: () {
+                            if (playlistSongs.isNotEmpty) {
+                              context.read<PlayerBloc>().add(
+                                PlaySong(
+                                  playlistSongs.first,
+                                  queue: playlistSongs,
+                                ),
+                              );
+                              context.push(
+                                '/player',
+                                extra: playlistSongs.first,
+                              );
+                            }
+                          },
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 38,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return const SliverToBoxAdapter(
+                child: Center(child: CircularProgressIndicator()),
+              );
+            },
+          ),
+          BlocBuilder<SongBloc, SongState>(
+            builder: (context, state) {
+              if (state is SongLoaded) {
+                final allSongs = state.songs;
+                final playlistSongs = allSongs
+                    .where((s) => playlist.songIds.contains(s.id))
+                    .toList();
+
+                if (playlistSongs.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+
                 return SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final song = playlistSongs[index];
                     return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: Image.network(
-                          song.songImage,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: Colors.grey,
-                            width: 50,
-                            height: 50,
-                          ),
-                        ),
+                      leading: SongImage(
+                        imageUrl: song.songImage,
+                        width: 50,
+                        height: 50,
+                        borderRadius: 5,
                       ),
                       title: Text(
                         song.songName,
