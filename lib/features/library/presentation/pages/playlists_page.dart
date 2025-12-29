@@ -191,44 +191,67 @@ class PlaylistsPage extends StatelessWidget {
                   Positioned(
                     bottom: 10,
                     right: 10,
-                    child: GestureDetector(
-                      onTap: () {
-                        // Play playlist
-                        final songState = context.read<SongBloc>().state;
-                        if (songState is SongLoaded) {
-                          final playlistSongs = songState.songs
-                              .where((s) => playlist.songIds.contains(s.id))
-                              .toList();
-
-                          if (playlistSongs.isNotEmpty) {
-                            context.read<PlayerBloc>().add(
-                              PlaySong(
-                                playlistSongs.first,
-                                queue: playlistSongs,
-                              ),
-                            );
-                            context.push('/player', extra: playlistSongs.first);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("No songs in this playlist"),
-                              ),
-                            );
-                          }
+                    child: BlocBuilder<PlayerBloc, PlayerState>(
+                      builder: (context, playerState) {
+                        // Check if this playlist is currently playing
+                        bool isPlaylistPlaying = false;
+                        if (playerState is PlayerPlaying) {
+                          final currentSongId = playerState.song.id;
+                          isPlaylistPlaying =
+                              playlist.songIds.contains(currentSongId) &&
+                              playerState.isPlaying;
                         }
+
+                        return GestureDetector(
+                          onTap: () {
+                            if (isPlaylistPlaying) {
+                              // Pause current playback
+                              context.read<PlayerBloc>().add(TogglePlay());
+                            } else {
+                              // Play playlist
+                              final songState = context.read<SongBloc>().state;
+                              if (songState is SongLoaded) {
+                                final playlistSongs = songState.songs
+                                    .where(
+                                      (s) => playlist.songIds.contains(s.id),
+                                    )
+                                    .toList();
+
+                                if (playlistSongs.isNotEmpty) {
+                                  context.read<PlayerBloc>().add(
+                                    PlaySong(
+                                      playlistSongs.first,
+                                      queue: playlistSongs,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "No songs in this playlist",
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isPlaylistPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        );
                       },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
                     ),
                   ),
                 ],

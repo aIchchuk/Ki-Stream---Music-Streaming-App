@@ -6,8 +6,10 @@ import 'package:kistream/core/theme/app_theme.dart';
 import 'package:kistream/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:kistream/features/auth/data/models/user_model.dart';
 import 'package:kistream/features/music/data/models/song_model.dart';
+import 'package:kistream/features/music/data/models/playlist_model.dart';
 import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
+import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 import 'package:kistream/features/shared/widgets/song_card.dart';
 
 class HomePage extends StatefulWidget {
@@ -22,6 +24,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     context.read<SongBloc>().add(LoadSongs());
+    context.read<PlaylistBloc>().add(LoadPlaylists());
   }
 
   @override
@@ -56,13 +59,37 @@ class _HomePageState extends State<HomePage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Playlists for you Section
+                        BlocBuilder<PlaylistBloc, PlaylistState>(
+                          builder: (context, state) {
+                            if (state is PlaylistLoaded) {
+                              final allPlaylists = state.playlists;
+                              if (allPlaylists.isNotEmpty) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildSectionHeader(
+                                      context,
+                                      "Playlists for you",
+                                    ),
+                                    const SizedBox(height: 15),
+                                    _buildPlaylistList(allPlaylists),
+                                    const SizedBox(height: 20),
+                                  ],
+                                );
+                              }
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+
                         // Newly Added Songs Section
                         _buildSectionHeader(
                           context,
                           "Newly Added Songs",
                           action: IconButton(
                             icon: const Icon(
-                              Icons.add_circle_outline,
+                              Icons.playlist_add,
                               color: Colors.white,
                               size: 28,
                             ),
@@ -183,6 +210,180 @@ class _HomePageState extends State<HomePage> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPlaylistList(List<PlaylistModel> allPlaylists) {
+    if (allPlaylists.isEmpty) {
+      return const Text(
+        "No playlists available.",
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    // Shuffle and pick 5
+    final randomPlaylists = List<PlaylistModel>.from(allPlaylists)..shuffle();
+    final pickedPlaylists = randomPlaylists.take(5).toList();
+
+    return SizedBox(
+      height: 250,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: pickedPlaylists.length,
+        itemBuilder: (context, index) {
+          final playlist = pickedPlaylists[index];
+          return _buildPlaylistCard(playlist);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPlaylistCard(PlaylistModel playlist) {
+    final color =
+        Colors.primaries[playlist.mood.hashCode % Colors.primaries.length];
+
+    return Container(
+      width: 180,
+      margin: const EdgeInsets.only(right: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: playlist.imagePath == null
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          color.withValues(alpha: 0.8),
+                          color.withValues(alpha: 0.4),
+                        ],
+                      )
+                    : null,
+                image: playlist.imagePath != null
+                    ? DecorationImage(
+                        image: FileImage(File(playlist.imagePath!)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: InkWell(
+                onTap: () {
+                  context.push('/playlist-detail', extra: playlist);
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Stack(
+                  children: [
+                    if (playlist.imagePath == null)
+                      Center(
+                        child: Icon(
+                          Icons.music_note_rounded,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 60,
+                        ),
+                      ),
+                    Positioned(
+                      bottom: 10,
+                      right: 10,
+                      child: BlocBuilder<PlayerBloc, PlayerState>(
+                        builder: (context, playerState) {
+                          // Check if this playlist is currently playing
+                          bool isPlaylistPlaying = false;
+                          if (playerState is PlayerPlaying) {
+                            final currentSongId = playerState.song.id;
+                            isPlaylistPlaying =
+                                playlist.songIds.contains(currentSongId) &&
+                                playerState.isPlaying;
+                          }
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (isPlaylistPlaying) {
+                                // Pause current playback
+                                context.read<PlayerBloc>().add(TogglePlay());
+                              } else {
+                                // Play playlist
+                                final songState = context
+                                    .read<SongBloc>()
+                                    .state;
+                                if (songState is SongLoaded) {
+                                  final playlistSongs = songState.songs
+                                      .where(
+                                        (s) => playlist.songIds.contains(s.id),
+                                      )
+                                      .toList();
+
+                                  if (playlistSongs.isNotEmpty) {
+                                    context.read<PlayerBloc>().add(
+                                      PlaySong(
+                                        playlistSongs.first,
+                                        queue: playlistSongs,
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "No songs in this playlist",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isPlaylistPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            playlist.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "By ${playlist.creatorName ?? 'Unknown'}",
+            style: TextStyle(color: Colors.grey[400], fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

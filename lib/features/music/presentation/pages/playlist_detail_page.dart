@@ -9,6 +9,7 @@ import '../bloc/player_bloc.dart';
 import '../bloc/song_bloc.dart';
 import '../../data/models/song_model.dart';
 import '../../../shared/widgets/song_image.dart';
+import '../../../shared/widgets/music_visualizer.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
   final PlaylistModel playlist;
@@ -171,34 +172,51 @@ class PlaylistDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         // Main Play Button
-                        GestureDetector(
-                          onTap: () {
-                            if (playlistSongs.isNotEmpty) {
-                              context.read<PlayerBloc>().add(
-                                PlaySong(
-                                  playlistSongs.first,
-                                  queue: playlistSongs,
-                                ),
-                              );
-                              context.push(
-                                '/player',
-                                extra: playlistSongs.first,
-                              );
+                        BlocBuilder<PlayerBloc, PlayerState>(
+                          builder: (context, playerState) {
+                            // Check if this playlist is currently playing
+                            bool isPlaylistPlaying = false;
+                            if (playerState is PlayerPlaying) {
+                              final currentSongId = playerState.song.id;
+                              isPlaylistPlaying =
+                                  playlist.songIds.contains(currentSongId) &&
+                                  playerState.isPlaying;
                             }
+
+                            return GestureDetector(
+                              onTap: () {
+                                if (isPlaylistPlaying) {
+                                  // Pause current playback
+                                  context.read<PlayerBloc>().add(TogglePlay());
+                                } else {
+                                  // Play playlist
+                                  if (playlistSongs.isNotEmpty) {
+                                    context.read<PlayerBloc>().add(
+                                      PlaySong(
+                                        playlistSongs.first,
+                                        queue: playlistSongs,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: const BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isPlaylistPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 38,
+                                ),
+                              ),
+                            );
                           },
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 38,
-                            ),
-                          ),
                         ),
                       ],
                     ),
@@ -225,27 +243,50 @@ class PlaylistDetailPage extends StatelessWidget {
                 return SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final song = playlistSongs[index];
-                    return ListTile(
-                      leading: SongImage(
-                        imageUrl: song.songImage,
-                        width: 50,
-                        height: 50,
-                        borderRadius: 5,
-                      ),
-                      title: Text(
-                        song.songName,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        song.artistName,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      onTap: () {
-                        // Play this song with PLAYLIST QUEUE ONLY
-                        context.read<PlayerBloc>().add(
-                          PlaySong(song, queue: playlistSongs),
+                    return BlocBuilder<PlayerBloc, PlayerState>(
+                      builder: (context, playerState) {
+                        bool isCurrentlyPlaying = false;
+                        if (playerState is PlayerPlaying) {
+                          isCurrentlyPlaying =
+                              playerState.song.id == song.id &&
+                              playerState.isPlaying;
+                        }
+
+                        return ListTile(
+                          leading: SongImage(
+                            imageUrl: song.songImage,
+                            width: 50,
+                            height: 50,
+                            borderRadius: 5,
+                          ),
+                          title: Text(
+                            song.songName,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            song.artistName,
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                          trailing: isCurrentlyPlaying
+                              ? const MusicVisualizer(
+                                  color: AppTheme.primaryColor,
+                                  barWidth: 3.0,
+                                  spacing: 2.0,
+                                  numberOfBars: 3,
+                                )
+                              : null,
+                          onTap: () {
+                            if (isCurrentlyPlaying) {
+                              // If already playing, navigate to player page
+                              context.push('/player', extra: song);
+                            } else {
+                              // First tap: Play this song with PLAYLIST QUEUE ONLY
+                              context.read<PlayerBloc>().add(
+                                PlaySong(song, queue: playlistSongs),
+                              );
+                            }
+                          },
                         );
-                        context.push('/player', extra: song);
                       },
                     );
                   }, childCount: playlistSongs.length),
