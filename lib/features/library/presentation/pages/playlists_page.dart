@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
-import '../../../../core/theme/app_theme.dart';
 import 'dart:io';
-import '../../../../features/music/data/models/playlist_model.dart';
-import '../../../../features/music/presentation/bloc/song_bloc.dart';
-import '../../../../features/music/presentation/bloc/player_bloc.dart';
+import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
+import 'package:kistream/features/music/data/models/playlist_model.dart';
+import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
+import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
+import 'package:kistream/features/shared/widgets/playing_highlight.dart';
+import 'package:kistream/core/theme/app_theme.dart';
 
 class PlaylistsPage extends StatelessWidget {
   const PlaylistsPage({super.key});
@@ -96,7 +97,7 @@ class PlaylistsPage extends StatelessWidget {
               color: AppTheme.surfaceColor,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withOpacity(0.1),
                 width: 1,
               ),
             ),
@@ -106,7 +107,7 @@ class PlaylistsPage extends StatelessWidget {
               child: Center(
                 child: Icon(
                   Icons.add,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  color: Colors.white.withOpacity(0.7),
                   size: 50,
                 ),
               ),
@@ -146,117 +147,122 @@ class PlaylistsPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: playlist.imagePath == null
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        color.withValues(alpha: 0.8),
-                        color.withValues(alpha: 0.4),
-                      ],
-                    )
-                  : null,
-              image: playlist.imagePath != null
-                  ? DecorationImage(
-                      image: FileImage(File(playlist.imagePath!)),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: InkWell(
-              onTap: () {
-                context.push('/playlist-detail', extra: playlist);
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                children: [
-                  if (playlist.imagePath == null)
-                    Center(
-                      child: Icon(
-                        Icons.music_note_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
-                        size: 60,
+          child: BlocBuilder<PlayerBloc, PlayerState>(
+            builder: (context, playerState) {
+              // Check if this playlist is currently playing
+              bool isPlaylistPlaying = false;
+              if (playerState is PlayerPlaying) {
+                final currentSongId = playerState.song.id;
+                isPlaylistPlaying =
+                    playlist.songIds.contains(currentSongId) &&
+                    playerState.isPlaying;
+              }
+
+              return PlayingHighlight(
+                isActive: isPlaylistPlaying,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: playlist.imagePath == null
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              color.withOpacity(0.8),
+                              color.withOpacity(0.4),
+                            ],
+                          )
+                        : null,
+                    image: playlist.imagePath != null
+                        ? DecorationImage(
+                            image: FileImage(File(playlist.imagePath!)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: BlocBuilder<PlayerBloc, PlayerState>(
-                      builder: (context, playerState) {
-                        // Check if this playlist is currently playing
-                        bool isPlaylistPlaying = false;
-                        if (playerState is PlayerPlaying) {
-                          final currentSongId = playerState.song.id;
-                          isPlaylistPlaying =
-                              playlist.songIds.contains(currentSongId) &&
-                              playerState.isPlaying;
-                        }
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (isPlaylistPlaying) {
-                              // Pause current playback
-                              context.read<PlayerBloc>().add(TogglePlay());
-                            } else {
-                              // Play playlist
-                              final songState = context.read<SongBloc>().state;
-                              if (songState is SongLoaded) {
-                                final playlistSongs = songState.songs
-                                    .where(
-                                      (s) => playlist.songIds.contains(s.id),
-                                    )
-                                    .toList();
-
-                                if (playlistSongs.isNotEmpty) {
-                                  context.read<PlayerBloc>().add(
-                                    PlaySong(
-                                      playlistSongs.first,
-                                      queue: playlistSongs,
-                                    ),
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "No songs in this playlist",
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
+                    ],
+                  ),
+                  child: InkWell(
+                    onTap: () {
+                      context.push('/playlist-detail', extra: playlist);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Stack(
+                      children: [
+                        if (playlist.imagePath == null)
+                          Center(
                             child: Icon(
-                              isPlaylistPlaying
-                                  ? Icons.pause_rounded
-                                  : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 24,
+                              Icons.music_note_rounded,
+                              color: Colors.white.withOpacity(0.5),
+                              size: 60,
                             ),
                           ),
-                        );
-                      },
+                        Positioned(
+                          bottom: 10,
+                          right: 10,
+                          child: GestureDetector(
+                            onTap: () {
+                              if (isPlaylistPlaying) {
+                                // Pause current playback
+                                context.read<PlayerBloc>().add(TogglePlay());
+                              } else {
+                                // Play playlist
+                                final songState = context
+                                    .read<SongBloc>()
+                                    .state;
+                                if (songState is SongLoaded) {
+                                  final playlistSongs = songState.songs
+                                      .where(
+                                        (s) => playlist.songIds.contains(s.id),
+                                      )
+                                      .toList();
+
+                                  if (playlistSongs.isNotEmpty) {
+                                    context.read<PlayerBloc>().add(
+                                      PlaySong(
+                                        playlistSongs.first,
+                                        queue: playlistSongs,
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "No songs in this playlist",
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isPlaylistPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),

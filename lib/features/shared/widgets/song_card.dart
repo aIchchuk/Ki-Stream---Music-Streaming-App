@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import './song_image.dart';
+import './playing_highlight.dart';
 
 class SongCard extends StatelessWidget {
   final String songImage;
   final String songName;
   final VoidCallback? onTap;
+  final bool isPlaying;
 
   const SongCard({
     super.key,
     required this.songImage,
     required this.songName,
     this.onTap,
+    this.isPlaying = false,
   });
 
   @override
@@ -21,11 +24,15 @@ class SongCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 15.0),
         child: Column(
           children: [
-            SongImage(
-              imageUrl: songImage,
-              width: 110,
-              height: 110,
+            PlayingHighlight(
+              isActive: isPlaying,
               borderRadius: 15,
+              child: SongImage(
+                imageUrl: songImage,
+                width: 110,
+                height: 110,
+                borderRadius: 15,
+              ),
             ),
             const SizedBox(height: 8),
             SizedBox(

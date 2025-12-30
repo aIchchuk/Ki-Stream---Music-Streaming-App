@@ -11,6 +11,7 @@ import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 import 'package:kistream/features/shared/widgets/song_card.dart';
+import 'package:kistream/features/shared/widgets/playing_highlight.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -162,17 +163,28 @@ class _HomePageState extends State<HomePage> {
     }
     return SizedBox(
       height: 160,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: songs.length,
-        itemBuilder: (context, index) {
-          final song = songs[index];
-          return SongCard(
-            songImage: song.songImage,
-            songName: song.songName,
-            onTap: () {
-              context.read<PlayerBloc>().add(PlaySong(song, queue: songs));
-              context.push('/player', extra: song);
+      child: BlocBuilder<PlayerBloc, PlayerState>(
+        builder: (context, playerState) {
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: songs.length,
+            itemBuilder: (context, index) {
+              final song = songs[index];
+              bool isPlaying = false;
+              if (playerState is PlayerPlaying) {
+                isPlaying =
+                    playerState.song.id == song.id && playerState.isPlaying;
+              }
+
+              return SongCard(
+                songImage: song.songImage,
+                songName: song.songName,
+                isPlaying: isPlaying,
+                onTap: () {
+                  context.read<PlayerBloc>().add(PlaySong(song, queue: songs));
+                  context.push('/player', extra: song);
+                },
+              );
             },
           );
         },
@@ -194,19 +206,30 @@ class _HomePageState extends State<HomePage> {
 
     return SizedBox(
       height: 160,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: pickedSongs.length,
-        itemBuilder: (context, index) {
-          final song = pickedSongs[index];
-          return SongCard(
-            songImage: song.songImage,
-            songName: song.songName,
-            onTap: () {
-              context.read<PlayerBloc>().add(
-                PlaySong(song, queue: pickedSongs),
+      child: BlocBuilder<PlayerBloc, PlayerState>(
+        builder: (context, playerState) {
+          return ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: pickedSongs.length,
+            itemBuilder: (context, index) {
+              final song = pickedSongs[index];
+              bool isPlaying = false;
+              if (playerState is PlayerPlaying) {
+                isPlaying =
+                    playerState.song.id == song.id && playerState.isPlaying;
+              }
+
+              return SongCard(
+                songImage: song.songImage,
+                songName: song.songName,
+                isPlaying: isPlaying,
+                onTap: () {
+                  context.read<PlayerBloc>().add(
+                    PlaySong(song, queue: pickedSongs),
+                  );
+                  context.push('/player', extra: song);
+                },
               );
-              context.push('/player', extra: song);
             },
           );
         },
@@ -250,119 +273,125 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: playlist.imagePath == null
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          color.withValues(alpha: 0.8),
-                          color.withValues(alpha: 0.4),
-                        ],
-                      )
-                    : null,
-                image: playlist.imagePath != null
-                    ? DecorationImage(
-                        image: FileImage(File(playlist.imagePath!)),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: InkWell(
-                onTap: () {
-                  context.push('/playlist-detail', extra: playlist);
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Stack(
-                  children: [
-                    if (playlist.imagePath == null)
-                      Center(
-                        child: Icon(
-                          Icons.music_note_rounded,
-                          color: Colors.white.withValues(alpha: 0.5),
-                          size: 60,
+            child: BlocBuilder<PlayerBloc, PlayerState>(
+              builder: (context, playerState) {
+                // Check if this playlist is currently playing
+                bool isPlaylistPlaying = false;
+                if (playerState is PlayerPlaying) {
+                  final currentSongId = playerState.song.id;
+                  isPlaylistPlaying =
+                      playlist.songIds.contains(currentSongId) &&
+                      playerState.isPlaying;
+                }
+
+                return PlayingHighlight(
+                  isActive: isPlaylistPlaying,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: playlist.imagePath == null
+                          ? LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                color.withOpacity(0.8),
+                                color.withOpacity(0.4),
+                              ],
+                            )
+                          : null,
+                      image: playlist.imagePath != null
+                          ? DecorationImage(
+                              image: FileImage(File(playlist.imagePath!)),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    Positioned(
-                      bottom: 10,
-                      right: 10,
-                      child: BlocBuilder<PlayerBloc, PlayerState>(
-                        builder: (context, playerState) {
-                          // Check if this playlist is currently playing
-                          bool isPlaylistPlaying = false;
-                          if (playerState is PlayerPlaying) {
-                            final currentSongId = playerState.song.id;
-                            isPlaylistPlaying =
-                                playlist.songIds.contains(currentSongId) &&
-                                playerState.isPlaying;
-                          }
-
-                          return GestureDetector(
-                            onTap: () {
-                              if (isPlaylistPlaying) {
-                                // Pause current playback
-                                context.read<PlayerBloc>().add(TogglePlay());
-                              } else {
-                                // Play playlist
-                                final songState = context
-                                    .read<SongBloc>()
-                                    .state;
-                                if (songState is SongLoaded) {
-                                  final playlistSongs = songState.songs
-                                      .where(
-                                        (s) => playlist.songIds.contains(s.id),
-                                      )
-                                      .toList();
-
-                                  if (playlistSongs.isNotEmpty) {
-                                    context.read<PlayerBloc>().add(
-                                      PlaySong(
-                                        playlistSongs.first,
-                                        queue: playlistSongs,
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "No songs in this playlist",
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor,
-                                shape: BoxShape.circle,
-                              ),
+                      ],
+                    ),
+                    child: InkWell(
+                      onTap: () {
+                        context.push('/playlist-detail', extra: playlist);
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Stack(
+                        children: [
+                          if (playlist.imagePath == null)
+                            Center(
                               child: Icon(
-                                isPlaylistPlaying
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 24,
+                                Icons.music_note_rounded,
+                                color: Colors.white.withOpacity(0.5),
+                                size: 60,
                               ),
                             ),
-                          );
-                        },
+                          Positioned(
+                            bottom: 10,
+                            right: 10,
+                            child: GestureDetector(
+                              onTap: () {
+                                if (isPlaylistPlaying) {
+                                  // Pause current playback
+                                  context.read<PlayerBloc>().add(TogglePlay());
+                                } else {
+                                  // Play playlist
+                                  final songState = context
+                                      .read<SongBloc>()
+                                      .state;
+                                  if (songState is SongLoaded) {
+                                    final playlistSongs = songState.songs
+                                        .where(
+                                          (s) =>
+                                              playlist.songIds.contains(s.id),
+                                        )
+                                        .toList();
+
+                                    if (playlistSongs.isNotEmpty) {
+                                      context.read<PlayerBloc>().add(
+                                        PlaySong(
+                                          playlistSongs.first,
+                                          queue: playlistSongs,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "No songs in this playlist",
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isPlaylistPlaying
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 8),
