@@ -1,7 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
+
+const songRoutes = require('./routes/song.routes');
+const playlistRoutes = require('./routes/playlist.routes');
+const userRoutes = require('./routes/user.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,6 +19,14 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.send('Ki Stream Server is running...');
 });
+
+// Static Files
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// Routes
+app.use('/api/songs', songRoutes);
+app.use('/api/playlists', playlistRoutes);
+app.use('/api/users', userRoutes);
 
 // Database Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ki_stream_db';

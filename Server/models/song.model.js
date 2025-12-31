@@ -27,6 +27,10 @@ const songSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isFavorite: {
+        type: Boolean,
+        default: false
+    },
     color: {
         type: String,
         default: '#000000'

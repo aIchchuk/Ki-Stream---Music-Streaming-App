@@ -1,5 +1,16 @@
 const Song = require('../models/song.model');
 
+// Add a new song
+exports.createSong = async (req, res) => {
+    try {
+        const song = new Song(req.body);
+        await song.save();
+        res.status(201).json(song);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 // Get all songs
 exports.getAllSongs = async (req, res) => {
     try {
