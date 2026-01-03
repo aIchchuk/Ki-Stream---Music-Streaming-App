@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const playlistController = require('../controllers/playlist.controller');
+const upload = require('../middleware/upload.middleware');
 
 // GET /api/playlists - Get all playlists
 router.get('/', playlistController.getAllPlaylists);
@@ -9,10 +10,10 @@ router.get('/', playlistController.getAllPlaylists);
 router.get('/:id', playlistController.getPlaylistById);
 
 // POST /api/playlists - Create a new playlist
-router.post('/', playlistController.createPlaylist);
+router.post('/', upload.single('imagePath'), playlistController.createPlaylist);
 
 // PUT /api/playlists/:id - Update a playlist
-router.put('/:id', playlistController.updatePlaylist);
+router.put('/:id', upload.single('imagePath'), playlistController.updatePlaylist);
 
 // DELETE /api/playlists/:id - Delete a playlist
 router.delete('/:id', playlistController.deletePlaylist);

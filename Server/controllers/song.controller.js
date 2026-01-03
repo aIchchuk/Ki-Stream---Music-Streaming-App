@@ -3,9 +3,23 @@ const Song = require('../models/song.model');
 // Add a new song
 exports.createSong = async (req, res) => {
     try {
-        const song = new Song(req.body);
+        const songData = { ...req.body };
+
+        // Handle file uploads
+        if (req.files) {
+            if (req.files['songImage']) {
+                songData.songImage = `song-images/${req.files['songImage'][0].filename}`;
+            }
+            if (req.files['audioFile']) {
+                songData.audioFile = `songs/${req.files['audioFile'][0].filename}`;
+            }
+        }
+
+        const song = new Song(songData);
         await song.save();
-        res.status(201).json(song);
+        const songResponse = song.toObject();
+        songResponse.id = song._id.toString();
+        res.status(201).json(songResponse);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -15,7 +29,12 @@ exports.createSong = async (req, res) => {
 exports.getAllSongs = async (req, res) => {
     try {
         const songs = await Song.find().sort({ createdAt: -1 });
-        res.status(200).json(songs);
+        const songsResponse = songs.map(s => {
+            const songObj = s.toObject();
+            songObj.id = s._id.toString();
+            return songObj;
+        });
+        res.status(200).json(songsResponse);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -28,7 +47,9 @@ exports.getSongById = async (req, res) => {
         if (!song) {
             return res.status(404).json({ message: 'Song not found' });
         }
-        res.status(200).json(song);
+        const songResponse = song.toObject();
+        songResponse.id = song._id.toString();
+        res.status(200).json(songResponse);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -41,8 +62,24 @@ exports.updateSongById = async (req, res) => {
         if (!song) {
             return res.status(404).json({ message: 'Song not found' });
         }
-        const newSong = await Song.updateOne({ _id: req.params.id }, { $set: req.body });
-        res.status(200).json(newSong);
+
+        const songData = { ...req.body };
+
+        // Handle file uploads
+        if (req.files) {
+            if (req.files['songImage']) {
+                songData.songImage = `song-images/${req.files['songImage'][0].filename}`;
+            }
+            if (req.files['audioFile']) {
+                songData.audioFile = `songs/${req.files['audioFile'][0].filename}`;
+            }
+        }
+
+        await Song.updateOne({ _id: req.params.id }, { $set: songData });
+        const updatedSong = await Song.findById(req.params.id);
+        const songResponse = updatedSong.toObject();
+        songResponse.id = updatedSong._id.toString();
+        res.status(200).json(songResponse);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

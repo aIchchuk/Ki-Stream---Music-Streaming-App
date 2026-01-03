@@ -12,6 +12,7 @@ import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 import 'package:kistream/features/shared/widgets/song_card.dart';
 import 'package:kistream/features/shared/widgets/playing_highlight.dart';
+import 'package:kistream/features/shared/widgets/song_image.dart'; // Added import
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -300,7 +301,9 @@ class _HomePageState extends State<HomePage> {
                           : null,
                       image: playlist.imagePath != null
                           ? DecorationImage(
-                              image: FileImage(File(playlist.imagePath!)),
+                              image: SongImage.getImageProvider(
+                                playlist.imagePath!,
+                              ),
                               fit: BoxFit.cover,
                             )
                           : null,

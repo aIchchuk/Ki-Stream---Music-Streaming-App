@@ -66,4 +66,34 @@ class SongModel extends HiveObject {
       isFavorite: isFavorite ?? this.isFavorite,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'songName': songName,
+      'artistName': artistName,
+      'songImage': songImage,
+      'audioFile': audioFile,
+      'dateAdded': dateAdded.toIso8601String(),
+      'albumName': albumName,
+      'isManual': isManual,
+      'isFavorite': isFavorite,
+    };
+  }
+
+  factory SongModel.fromJson(Map<String, dynamic> json) {
+    return SongModel(
+      id: json['id'] ?? json['_id'] ?? '',
+      songName: json['songName'] ?? '',
+      artistName: json['artistName'] ?? '',
+      songImage: json['songImage'] ?? '',
+      audioFile: json['audioFile'] ?? '',
+      dateAdded: json['dateAdded'] != null
+          ? DateTime.parse(json['dateAdded'])
+          : DateTime.now(),
+      albumName: json['albumName'],
+      isManual: json['isManual'],
+      isFavorite: json['isFavorite'] ?? false,
+    );
+  }
 }

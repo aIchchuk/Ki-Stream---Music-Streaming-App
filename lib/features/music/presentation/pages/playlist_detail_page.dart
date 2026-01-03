@@ -1,14 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/song_image.dart';
 import '../../data/models/playlist_model.dart';
-
 import '../bloc/player_bloc.dart';
 import '../bloc/song_bloc.dart';
 import '../../data/models/song_model.dart';
-import '../../../shared/widgets/song_image.dart';
 import '../../../shared/widgets/music_visualizer.dart';
 
 class PlaylistDetailPage extends StatelessWidget {
@@ -46,7 +44,9 @@ class PlaylistDetailPage extends StatelessWidget {
                       : null,
                   image: playlist.imagePath != null
                       ? DecorationImage(
-                          image: FileImage(File(playlist.imagePath!)),
+                          image: SongImage.getImageProvider(
+                            playlist.imagePath!,
+                          ),
                           fit: BoxFit.cover,
                         )
                       : null,

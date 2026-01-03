@@ -1,18 +1,35 @@
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
+import '../datasources/auth_local_data_source.dart';
+import '../datasources/auth_remote_data_source.dart';
+import '../../../../core/network/server_health_data_source.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../models/user_model.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final GoogleSignIn _googleSignIn;
-  final Box<UserModel> _userBox;
-  final Box _usersDbBox;
+  final AuthLocalDataSource localDataSource;
+  final AuthRemoteDataSource remoteDataSource;
+  final ServerHealthDataSource serverHealthDataSource;
 
-  AuthRepositoryImpl(this._googleSignIn, this._userBox, this._usersDbBox);
+  AuthRepositoryImpl({
+    required GoogleSignIn googleSignIn,
+    required this.localDataSource,
+    required this.remoteDataSource,
+    required this.serverHealthDataSource,
+  }) : _googleSignIn = googleSignIn;
+
+  Future<void> _ensureServerRunning() async {
+    final isRunning = await serverHealthDataSource.isServerRunning();
+    if (!isRunning) {
+      throw Exception(
+        'Server is unreachable. This operation requires an active server connection.',
+      );
+    }
+  }
 
   @override
   Future<UserModel?> signInWithGoogle() async {
+    await _ensureServerRunning();
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
       if (account != null) {
@@ -22,8 +39,12 @@ class AuthRepositoryImpl implements AuthRepository {
           displayName: account.displayName ?? 'User',
           photoUrl: account.photoUrl,
         );
-        // Save to session box
-        await _userBox.put('currentUser', user);
+
+        // In a real app, we would also verify this user with our server
+        // and get the server-side user object (with ID, etc.)
+        // For now, following the pattern of caching after success.
+
+        await localDataSource.cacheUser(user);
         return user;
       }
     } catch (e) {
@@ -34,51 +55,22 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserModel?> signIn(String email, String password) async {
-    try {
-      final userData = _usersDbBox.get(email);
-      if (userData != null) {
-        final localUser = UserModel.fromJson(
-          Map<String, dynamic>.from(userData),
-        );
-        if (localUser.password == password) {
-          await _userBox.put('currentUser', localUser);
-          return localUser;
-        } else {
-          throw Exception('Invalid credentials');
-        }
-      } else {
-        throw Exception('User not found');
-      }
-    } catch (e) {
-      throw Exception('Login error: $e');
-    }
+    await _ensureServerRunning();
+    // Must go through server first
+    final user = await remoteDataSource.signIn(email, password);
+    // On success, cache user
+    await localDataSource.cacheUser(user);
+    return user;
   }
 
   @override
   Future<UserModel?> signUp(String email, String password, String name) async {
-    try {
-      if (_usersDbBox.containsKey(email)) {
-        throw Exception('User already exists');
-      }
-
-      final newUser = UserModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        email: email,
-        displayName: name,
-        password: password,
-        photoUrl: '',
-      );
-
-      // Save to DB box
-      await _usersDbBox.put(email, newUser.toJson());
-
-      // Log them in locally (session)
-      await _userBox.put('currentUser', newUser);
-
-      return newUser;
-    } catch (e) {
-      throw Exception('Signup error: $e');
-    }
+    await _ensureServerRunning();
+    // Must go through server first
+    final user = await remoteDataSource.signUp(email, password, name);
+    // On success, cache user
+    await localDataSource.cacheUser(user);
+    return user;
   }
 
   @override
@@ -86,108 +78,114 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _googleSignIn.signOut();
     } catch (_) {}
-    await _userBox.delete('currentUser');
+    await localDataSource.deleteUser();
   }
 
   @override
   Future<UserModel?> getCurrentUser() async {
-    return _userBox.get('currentUser');
+    return localDataSource.getCurrentUser();
   }
 
   @override
   Future<bool> get isSignedIn async {
-    return _userBox.containsKey('currentUser');
+    final user = await localDataSource.getCurrentUser();
+    return user != null;
   }
 
   @override
   Future<void> updateProfilePhoto(String path) async {
-    final currentUser = _userBox.get('currentUser');
+    final currentUser = await localDataSource.getCurrentUser();
     if (currentUser != null) {
+      await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(photoUrl: path);
-      await _userBox.put('currentUser', updatedUser);
-
-      if (_usersDbBox.containsKey(currentUser.email)) {
-        final userData = Map<String, dynamic>.from(
-          _usersDbBox.get(currentUser.email),
-        );
-        userData['userImageUrl'] = path;
-        await _usersDbBox.put(currentUser.email, userData);
-      }
+      // Update on server first
+      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Update local cache
+      await localDataSource.cacheUser(savedUser);
     }
   }
 
   @override
   Future<void> updateEmail(String newEmail) async {
-    final currentUser = _userBox.get('currentUser');
+    final currentUser = await localDataSource.getCurrentUser();
     if (currentUser != null) {
-      final oldEmail = currentUser.email;
+      await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(email: newEmail);
-      await _userBox.put('currentUser', updatedUser);
-
-      if (_usersDbBox.containsKey(oldEmail)) {
-        final userData = _usersDbBox.get(oldEmail);
-        await _usersDbBox.delete(oldEmail);
-        await _usersDbBox.put(newEmail, userData);
-      }
+      // Update on server first
+      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Update local cache
+      await localDataSource.cacheUser(savedUser);
     }
   }
 
   @override
   Future<void> updatePassword(String newPassword) async {
-    final currentUser = _userBox.get('currentUser');
+    final currentUser = await localDataSource.getCurrentUser();
     if (currentUser != null) {
+      await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(password: newPassword);
-      await _userBox.put('currentUser', updatedUser);
-
-      if (_usersDbBox.containsKey(currentUser.email)) {
-        final userData = Map<String, dynamic>.from(
-          _usersDbBox.get(currentUser.email),
-        );
-        userData['password'] = newPassword;
-        await _usersDbBox.put(currentUser.email, userData);
-      }
+      // Update on server first
+      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Update local cache
+      await localDataSource.cacheUser(savedUser);
     }
   }
 
   @override
   Future<void> updateDisplayName(String newName) async {
-    final currentUser = _userBox.get('currentUser');
+    final currentUser = await localDataSource.getCurrentUser();
     if (currentUser != null) {
+      await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(displayName: newName);
-      await _userBox.put('currentUser', updatedUser);
-
-      if (_usersDbBox.containsKey(currentUser.email)) {
-        final userData = Map<String, dynamic>.from(
-          _usersDbBox.get(currentUser.email),
-        );
-        userData['fullName'] = newName;
-        await _usersDbBox.put(currentUser.email, userData);
-      }
+      // Update on server first
+      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Update local cache
+      await localDataSource.cacheUser(savedUser);
     }
   }
 
   @override
   Future<void> deleteAccount() async {
-    final currentUser = _userBox.get('currentUser');
+    final currentUser = await localDataSource.getCurrentUser();
     if (currentUser != null) {
-      await _usersDbBox.delete(currentUser.email);
+      await _ensureServerRunning();
+      // Delete from server first
+      await remoteDataSource.deleteAccount(currentUser.id);
     }
     await signOut();
   }
 
   @override
   Future<List<UserModel>> getAllUsers() async {
-    final List<UserModel> users = [];
-    for (var value in _usersDbBox.values) {
-      if (value is Map) {
-        users.add(UserModel.fromJson(Map<String, dynamic>.from(value)));
-      }
+    // Return cached users immediately
+    final localUsers = await localDataSource.getAllCachedUsers();
+
+    // Background sync
+    _syncUsers();
+
+    return localUsers;
+  }
+
+  Future<void> _syncUsers() async {
+    try {
+      final remoteUsers = await remoteDataSource.getAllUsers();
+      await localDataSource.cacheUsers(remoteUsers);
+    } catch (e) {
+      // Handle sync error
     }
-    return users;
   }
 
   @override
-  Future<void> deleteUser(String email) async {
-    await _usersDbBox.delete(email);
+  Future<void> deleteUser(String id) async {
+    await _ensureServerRunning();
+    // Delete from server first
+    await remoteDataSource.deleteUser(id);
+    // No specific local delete for a specific user in library yet,
+    // but the next sync will handle it.
+  }
+
+  @override
+  Future<void> clearLocalCache() async {
+    await localDataSource.clearCache();
   }
 }

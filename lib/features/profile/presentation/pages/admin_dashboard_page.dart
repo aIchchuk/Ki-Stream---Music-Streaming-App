@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/di/injection_container.dart';
+import '../../../../core/network/server_health_data_source.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
@@ -22,8 +22,42 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   bool _showUsers = false;
   bool _showSongs = false;
   bool _showPlaylists = false;
+  bool _isServerDown = false;
 
-  Future<void> _deleteUser(String email, String name) async {
+  @override
+  void initState() {
+    super.initState();
+    _checkServerStatus();
+  }
+
+  Future<void> _checkServerStatus() async {
+    final isRunning = await sl<ServerHealthDataSource>().isServerRunning();
+    if (mounted) {
+      setState(() => _isServerDown = !isRunning);
+    }
+  }
+
+  void _showServerError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Server is unreachable. Admin actions are disabled."),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  Future<void> _deleteUser(String id, String name) async {
+    if (_isServerDown) {
+      _showServerError();
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -48,12 +82,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
 
     if (confirmed == true && mounted) {
-      await GetIt.I<AuthRepository>().deleteUser(email);
-      setState(() {}); // Refresh list
+      try {
+        await GetIt.I<AuthRepository>().deleteUser(id);
+        setState(() {}); // Refresh list
+      } catch (e) {
+        _showError(e.toString());
+      }
     }
   }
 
   Future<void> _deleteSong(String id, String name) async {
+    if (_isServerDown) {
+      _showServerError();
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -78,12 +121,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
 
     if (confirmed == true && mounted) {
-      await GetIt.I<SongRepository>().deleteSong(id);
-      setState(() {}); // Refresh list
+      try {
+        await GetIt.I<SongRepository>().deleteSong(id);
+        setState(() {}); // Refresh list
+      } catch (e) {
+        _showError(e.toString());
+      }
     }
   }
 
   Future<void> _deletePlaylist(String id, String name) async {
+    if (_isServerDown) {
+      _showServerError();
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -111,8 +163,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
 
     if (confirmed == true && mounted) {
-      await GetIt.I<PlaylistRepository>().deletePlaylist(id);
-      setState(() {}); // Refresh list
+      try {
+        await GetIt.I<PlaylistRepository>().deletePlaylist(id);
+        setState(() {}); // Refresh list
+      } catch (e) {
+        _showError(e.toString());
+      }
     }
   }
 
@@ -265,6 +321,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 15),
+                        ElevatedButton(
+                          onPressed: _showClearCacheConfirmation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red.withValues(alpha: 0.8),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            fixedSize: const Size(250, 60),
+                          ),
+                          child: const Text(
+                            "Clear Local Cache",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -287,20 +366,83 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 }),
               )
             : null,
-        title: Text(
-          _showUsers
-              ? "All Users"
-              : _showSongs
-              ? "All Songs"
-              : _showPlaylists
-              ? "All Playlists"
-              : "Admin Dashboard",
-          style: const TextStyle(color: Colors.white),
+        title: Row(
+          children: [
+            Text(
+              _showUsers
+                  ? "All Users"
+                  : _showSongs
+                  ? "All Songs"
+                  : _showPlaylists
+                  ? "All Playlists"
+                  : "Admin Dashboard",
+              style: const TextStyle(color: Colors.white),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _isServerDown ? Colors.red : Colors.green,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _isServerDown ? "Offline" : "Online",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
     );
+  }
+
+  Future<void> _showClearCacheConfirmation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor,
+        title: const Text(
+          "Clear Local Cache",
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          "This will delete ALL local data (users, songs, playlists) stored in Hive. This will NOT affect the server. Continue?",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Clear All"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await GetIt.I<AuthRepository>().clearLocalCache();
+        await GetIt.I<SongRepository>().clearLocalCache();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Local cache cleared successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {}); // Refresh stats
+      } catch (e) {
+        _showError("Failed to clear cache: $e");
+      }
+    }
   }
 
   Widget _buildUsersList() {
@@ -392,7 +534,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () => _deleteUser(user.email, user.displayName),
+                  onPressed: () => _deleteUser(user.id, user.displayName),
                 ),
               ),
             );
@@ -565,7 +707,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                         : null,
                     image: playlist.imagePath != null
                         ? DecorationImage(
-                            image: FileImage(File(playlist.imagePath!)),
+                            image: SongImage.getImageProvider(
+                              playlist.imagePath!,
+                            ),
                             fit: BoxFit.cover,
                           )
                         : null,
@@ -639,10 +783,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   ImageProvider? _getProfileImageProvider(String? path) {
     if (path == null || path.isEmpty) return null;
-    if (path.startsWith('http')) {
-      return CachedNetworkImageProvider(path);
-    } else {
-      return FileImage(File(path));
-    }
+    return SongImage.getImageProvider(path);
   }
 }

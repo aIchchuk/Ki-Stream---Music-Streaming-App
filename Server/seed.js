@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 require('dotenv').config();
 const Song = require('./models/song.model');
 const Playlist = require('./models/playlist.model');
+const User = require('./models/user.model');
+const bcrypt = require('bcryptjs');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ki_stream_db';
 
@@ -67,7 +69,19 @@ async function seedDatabase() {
         // Clear existing data
         await Song.deleteMany({});
         await Playlist.deleteMany({});
-        console.log('Cleared existing songs and playlists.');
+        await User.deleteMany({});
+        console.log('Cleared existing songs, playlists, and users.');
+
+        // Seed Admin User
+        const salt = await bcrypt.genSalt(10);
+        const hashedAdminPassword = await bcrypt.hash('admin123', salt);
+        const adminUser = new User({
+            fullName: 'Admin User',
+            email: 'admin@gmail.com',
+            password: hashedAdminPassword
+        });
+        await adminUser.save();
+        console.log('Admin user created (admin@gmail.com / admin123)');
 
         for (const playlistItem of playlistsData) {
             const songIds = [];

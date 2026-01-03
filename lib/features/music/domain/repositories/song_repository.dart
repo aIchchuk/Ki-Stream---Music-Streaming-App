@@ -5,4 +5,5 @@ abstract class SongRepository {
   Future<void> addSong(SongModel song);
   Future<void> deleteSong(String id);
   Future<void> toggleFavorite(SongModel song);
+  Future<void> clearLocalCache();
 }

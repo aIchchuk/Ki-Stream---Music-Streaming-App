@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
 import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
 import 'package:kistream/features/music/data/models/playlist_model.dart';
 import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
 import 'package:kistream/features/shared/widgets/playing_highlight.dart';
+import 'package:kistream/features/shared/widgets/song_image.dart';
 import 'package:kistream/core/theme/app_theme.dart';
 
 class PlaylistsPage extends StatelessWidget {
@@ -174,7 +174,9 @@ class PlaylistsPage extends StatelessWidget {
                         : null,
                     image: playlist.imagePath != null
                         ? DecorationImage(
-                            image: FileImage(File(playlist.imagePath!)),
+                            image: SongImage.getImageProvider(
+                              playlist.imagePath!,
+                            ),
                             fit: BoxFit.cover,
                           )
                         : null,

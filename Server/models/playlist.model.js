@@ -20,8 +20,7 @@ const playlistSchema = new mongoose.Schema({
         default: ''
     },
     creatorId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        type: String
     },
     creatorName: {
         type: String,

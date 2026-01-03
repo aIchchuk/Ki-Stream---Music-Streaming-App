@@ -60,4 +60,32 @@ class PlaylistModel extends HiveObject {
       creatorName: creatorName ?? this.creatorName,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'mood': mood,
+      'songIds': songIds,
+      'dateCreated': dateCreated.toIso8601String(),
+      'imagePath': imagePath,
+      'creatorId': creatorId,
+      'creatorName': creatorName,
+    };
+  }
+
+  factory PlaylistModel.fromJson(Map<String, dynamic> json) {
+    return PlaylistModel(
+      id: json['id'] ?? json['_id'] ?? '',
+      name: json['name'] ?? '',
+      mood: json['mood'] ?? '',
+      songIds: List<String>.from(json['songIds'] ?? []),
+      dateCreated: json['dateCreated'] != null
+          ? DateTime.parse(json['dateCreated'])
+          : DateTime.now(),
+      imagePath: json['imagePath'],
+      creatorId: json['creatorId'],
+      creatorName: json['creatorName'],
+    );
+  }
 }

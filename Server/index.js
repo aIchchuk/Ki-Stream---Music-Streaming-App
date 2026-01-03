@@ -20,6 +20,11 @@ app.get('/', (req, res) => {
     res.send('Ki Stream Server is running...');
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok' });
+});
+
 // Static Files
 app.use('/public', express.static(path.join(__dirname, 'public')));
 

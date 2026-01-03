@@ -15,5 +15,6 @@ abstract class AuthRepository {
 
   // Admin methods
   Future<List<UserModel>> getAllUsers();
-  Future<void> deleteUser(String email);
+  Future<void> deleteUser(String id);
+  Future<void> clearLocalCache();
 }
