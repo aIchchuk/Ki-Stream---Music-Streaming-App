@@ -2,7 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
 import 'package:kistream/core/theme/app_theme.dart';
+import 'package:kistream/core/network/server_health_data_source.dart';
 import 'package:kistream/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:kistream/features/auth/data/models/user_model.dart';
 import 'package:kistream/features/music/data/models/song_model.dart';
@@ -10,6 +12,7 @@ import 'package:kistream/features/music/data/models/playlist_model.dart';
 import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
+import 'package:kistream/features/music/presentation/bloc/downloads_bloc.dart';
 import 'package:kistream/features/shared/widgets/song_card.dart';
 import 'package:kistream/features/shared/widgets/playing_highlight.dart';
 import 'package:kistream/features/shared/widgets/song_image.dart'; // Added import
@@ -22,11 +25,23 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  bool isServerOnline = true;
+
   @override
   void initState() {
     super.initState();
+    _checkServerStatus();
     context.read<SongBloc>().add(LoadSongs());
     context.read<PlaylistBloc>().add(LoadPlaylists());
+  }
+
+  Future<void> _checkServerStatus() async {
+    final status = await GetIt.I<ServerHealthDataSource>().isServerRunning();
+    if (mounted) {
+      setState(() {
+        isServerOnline = status;
+      });
+    }
   }
 
   @override
@@ -45,8 +60,10 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 20),
 
               // Search / Mood
-              const FeelingWidget(),
-              const SizedBox(height: 30),
+              if (isServerOnline) ...[
+                const FeelingWidget(),
+                const SizedBox(height: 30),
+              ],
 
               BlocBuilder<SongBloc, SongState>(
                 builder: (context, state) {
@@ -62,62 +79,141 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Playlists for you Section
-                        BlocBuilder<PlaylistBloc, PlaylistState>(
-                          builder: (context, state) {
-                            if (state is PlaylistLoaded) {
-                              final allPlaylists = state.playlists;
-                              if (allPlaylists.isNotEmpty) {
+                        if (isServerOnline)
+                          BlocBuilder<PlaylistBloc, PlaylistState>(
+                            builder: (context, state) {
+                              if (state is PlaylistLoaded) {
+                                final allPlaylists = state.playlists;
+                                if (allPlaylists.isNotEmpty) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _buildSectionHeader(
+                                        context,
+                                        "Playlists for you",
+                                      ),
+                                      const SizedBox(height: 15),
+                                      _buildPlaylistList(allPlaylists),
+                                      const SizedBox(height: 20),
+                                    ],
+                                  );
+                                }
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                        // Newly Added Songs Section
+                        if (isServerOnline) ...[
+                          _buildSectionHeader(
+                            context,
+                            "Newly Added Songs",
+                            action: IconButton(
+                              icon: const Icon(
+                                Icons.playlist_add,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              onPressed: () {
+                                context.push('/add-song');
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          _buildSongList(
+                            manualSongs,
+                            "No manual songs added yet.",
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+
+                        // Downloaded Playlists Section
+                        if (!isServerOnline)
+                          BlocBuilder<DownloadsBloc, DownloadsState>(
+                            builder: (context, downloadsState) {
+                              if (downloadsState is DownloadsLoaded) {
+                                return BlocBuilder<PlaylistBloc, PlaylistState>(
+                                  builder: (context, playlistState) {
+                                    if (playlistState is PlaylistLoaded) {
+                                      // Find playlists where ALL songs are downloaded
+                                      final downloadedPlaylists = playlistState
+                                          .playlists
+                                          .where((playlist) {
+                                            if (playlist.songIds.isEmpty) {
+                                              return false;
+                                            }
+                                            // Check if all songs in playlist are downloaded
+                                            return playlist.songIds.every(
+                                              (songId) =>
+                                                  downloadsState.songs.any(
+                                                    (downloadedSong) =>
+                                                        downloadedSong.id ==
+                                                        songId,
+                                                  ),
+                                            );
+                                          })
+                                          .toList();
+
+                                      if (downloadedPlaylists.isNotEmpty) {
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildSectionHeader(
+                                              context,
+                                              "Downloaded Playlists",
+                                            ),
+                                            const SizedBox(height: 15),
+                                            _buildPlaylistList(
+                                              downloadedPlaylists,
+                                            ),
+                                            const SizedBox(height: 10),
+                                          ],
+                                        );
+                                      }
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                        // Downloads Section
+                        if (!isServerOnline)
+                          BlocBuilder<DownloadsBloc, DownloadsState>(
+                            builder: (context, downloadsState) {
+                              if (downloadsState is DownloadsLoaded &&
+                                  downloadsState.songs.isNotEmpty) {
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildSectionHeader(
-                                      context,
-                                      "Playlists for you",
-                                    ),
+                                    _buildSectionHeader(context, "Downloads"),
                                     const SizedBox(height: 15),
-                                    _buildPlaylistList(allPlaylists),
-                                    const SizedBox(height: 20),
+                                    _buildSongList(downloadsState.songs, ""),
+                                    const SizedBox(height: 10),
                                   ],
                                 );
                               }
-                            }
-                            return const SizedBox.shrink();
-                          },
-                        ),
-
-                        // Newly Added Songs Section
-                        _buildSectionHeader(
-                          context,
-                          "Newly Added Songs",
-                          action: IconButton(
-                            icon: const Icon(
-                              Icons.playlist_add,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              context.push('/add-song');
+                              return const SizedBox.shrink();
                             },
                           ),
-                        ),
-                        const SizedBox(height: 15),
-                        _buildSongList(
-                          manualSongs,
-                          "No manual songs added yet.",
-                        ),
-                        const SizedBox(height: 10),
 
                         // Made for You Section
-                        _buildSectionHeader(context, "Made for You"),
-                        const SizedBox(height: 15),
-                        _buildRandomSongList(allSongs),
-                        const SizedBox(height: 10),
+                        if (isServerOnline) ...[
+                          _buildSectionHeader(context, "Made for You"),
+                          const SizedBox(height: 15),
+                          _buildRandomSongList(allSongs),
+                          const SizedBox(height: 10),
 
-                        // Today's Picks Section
-                        _buildSectionHeader(context, "Today's Picks"),
-                        const SizedBox(height: 15),
-                        _buildRandomSongList(allSongs),
-                        const SizedBox(height: 20),
+                          // Today's Picks Section
+                          _buildSectionHeader(context, "Today's Picks"),
+                          const SizedBox(height: 15),
+                          _buildRandomSongList(allSongs),
+                          const SizedBox(height: 20),
+                        ],
                       ],
                     );
                   } else if (state is SongError) {
@@ -294,8 +390,8 @@ class _HomePageState extends State<HomePage> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                color.withOpacity(0.8),
-                                color.withOpacity(0.4),
+                                color.withValues(alpha: 0.8),
+                                color.withValues(alpha: 0.4),
                               ],
                             )
                           : null,
@@ -310,7 +406,7 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -327,7 +423,7 @@ class _HomePageState extends State<HomePage> {
                             Center(
                               child: Icon(
                                 Icons.music_note_rounded,
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white.withValues(alpha: 0.5),
                                 size: 60,
                               ),
                             ),
@@ -344,32 +440,60 @@ class _HomePageState extends State<HomePage> {
                                   final songState = context
                                       .read<SongBloc>()
                                       .state;
+                                  final downloadsState = context
+                                      .read<DownloadsBloc>()
+                                      .state;
+
+                                  List<SongModel> playlistSongs = [];
+
                                   if (songState is SongLoaded) {
-                                    final playlistSongs = songState.songs
+                                    playlistSongs = songState.songs
                                         .where(
                                           (s) =>
                                               playlist.songIds.contains(s.id),
                                         )
                                         .toList();
+                                  }
 
-                                    if (playlistSongs.isNotEmpty) {
-                                      context.read<PlayerBloc>().add(
-                                        PlaySong(
-                                          playlistSongs.first,
-                                          queue: playlistSongs,
-                                        ),
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            "No songs in this playlist",
-                                          ),
-                                        ),
-                                      );
+                                  // If we have downloaded songs, prefer those (they have local paths)
+                                  if (downloadsState is DownloadsLoaded) {
+                                    playlistSongs = playlistSongs.map((song) {
+                                      final downloadedRecord = downloadsState
+                                          .songs
+                                          .firstWhere(
+                                            (ds) => ds.id == song.id,
+                                            orElse: () => song,
+                                          );
+                                      return downloadedRecord;
+                                    }).toList();
+
+                                    // If playlistSongs is still empty (e.g. SongBloc isn't loaded),
+                                    // try to populate directly from downloads
+                                    if (playlistSongs.isEmpty) {
+                                      playlistSongs = downloadsState.songs
+                                          .where(
+                                            (s) =>
+                                                playlist.songIds.contains(s.id),
+                                          )
+                                          .toList();
                                     }
+                                  }
+
+                                  if (playlistSongs.isNotEmpty) {
+                                    context.read<PlayerBloc>().add(
+                                      PlaySong(
+                                        playlistSongs.first,
+                                        queue: playlistSongs,
+                                      ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "No songs in this playlist or not downloaded",
+                                        ),
+                                      ),
+                                    );
                                   }
                                 }
                               },

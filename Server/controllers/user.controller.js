@@ -94,15 +94,26 @@ exports.getUserById = async (req, res) => {
 // Update user
 exports.updateUser = async (req, res) => {
     try {
+        const userData = { ...req.body };
+
+        if (req.file) {
+            userData.userImageUrl = `user-images/${req.file.filename}`;
+        }
+
         const user = await User.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            userData,
             { new: true }
         ).select('-password');
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        res.status(200).json(user);
+
+        const userResponse = user.toObject();
+        userResponse.id = user._id.toString();
+
+        res.status(200).json(userResponse);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

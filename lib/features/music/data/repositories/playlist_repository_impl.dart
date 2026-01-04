@@ -47,10 +47,7 @@ class PlaylistRepositoryImpl implements PlaylistRepository {
   @override
   Future<void> createPlaylist(PlaylistModel playlist) async {
     await _ensureServerRunning();
-    // Must be executed on the server first
-    final createdPlaylist = await remoteDataSource.createPlaylist(playlist);
-    // After success, update Hive
-    await localDataSource.cachePlaylist(createdPlaylist);
+    await remoteDataSource.createPlaylist(playlist);
   }
 
   @override

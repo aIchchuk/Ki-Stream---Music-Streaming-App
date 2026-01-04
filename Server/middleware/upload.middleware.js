@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Ensure directories exist
-const folders = ['public/song-images', 'public/playlist-images', 'public/songs'];
+const folders = ['public/song-images', 'public/playlist-images', 'public/songs', 'public/user-images'];
 folders.forEach(folder => {
     const dir = path.join(__dirname, '..', folder);
     if (!fs.existsSync(dir)) {
@@ -17,6 +17,7 @@ const storage = multer.diskStorage({
         if (file.fieldname === 'songImage') dest += 'song-images';
         else if (file.fieldname === 'audioFile') dest += 'songs';
         else if (file.fieldname === 'imagePath') dest += 'playlist-images';
+        else if (file.fieldname === 'userImageUrl') dest += 'user-images';
 
         cb(null, path.join(__dirname, '..', dest));
     },

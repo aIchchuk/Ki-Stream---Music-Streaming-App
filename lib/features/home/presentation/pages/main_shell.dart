@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:get_it/get_it.dart';
 
 import '../../../music/data/models/song_model.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
+import '../../../../core/network/server_health_data_source.dart';
 
 /// MainShell widget with dismissible MiniPlayer and route-aware hiding
 class MainShell extends StatefulWidget {
@@ -19,6 +22,32 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   bool _miniPlayerDismissed = false;
+  bool _isServerRunning = true;
+  Timer? _healthTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkServerStatus();
+    _healthTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _checkServerStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _healthTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkServerStatus() async {
+    final isRunning = await GetIt.I<ServerHealthDataSource>().isServerRunning();
+    if (mounted && _isServerRunning != isRunning) {
+      setState(() {
+        _isServerRunning = isRunning;
+      });
+    }
+  }
 
   bool _isPlayerRoute(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
@@ -36,11 +65,35 @@ class _MainShellState extends State<MainShell> {
     final hideForPlayerPage = _isPlayerRoute(context);
 
     return Scaffold(
-      body: widget.child,
+      body: Column(
+        children: [
+          if (!_isServerRunning)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              color: Colors.redAccent,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_off, size: 14, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    "Offline Mode (Read-only)",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(child: widget.child),
+        ],
+      ),
       bottomNavigationBar: BlocListener<PlayerBloc, PlayerState>(
         listener: (context, state) {
           if (state is PlayerPlaying) {
-            // Reset dismissal every time a song is played
             setState(() {
               _miniPlayerDismissed = false;
             });
@@ -74,7 +127,6 @@ class _MainShellState extends State<MainShell> {
   }
 }
 
-/// MiniPlayer widget with horizontal swipe-to-dismiss animation
 class DismissibleMiniPlayer extends StatefulWidget {
   final SongModel song;
   final bool isPlaying;
@@ -99,17 +151,14 @@ class _DismissibleMiniPlayerState extends State<DismissibleMiniPlayer>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-
     _offsetAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(1.0, 0), // Slide out to right
+      end: const Offset(1.0, 0),
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         widget.onDismissed();
@@ -144,7 +193,6 @@ class _DismissibleMiniPlayerState extends State<DismissibleMiniPlayer>
   }
 }
 
-/// Your MiniPlayer widget
 class MiniPlayer extends StatelessWidget {
   final SongModel song;
   final bool isPlaying;
@@ -229,7 +277,6 @@ class MiniPlayer extends StatelessWidget {
               ],
             ),
           ),
-          // Progress Bar at the bottom
           Positioned(
             left: 26,
             right: 26,
@@ -255,7 +302,7 @@ class MiniPlayer extends StatelessWidget {
                         minHeight: 2,
                         backgroundColor: Colors.white10,
                         valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF8B80F9), // Purple accent
+                          Color(0xFF8B80F9),
                         ),
                       ),
                     );
@@ -307,7 +354,6 @@ class MiniPlayer extends StatelessWidget {
   }
 }
 
-/// Bottom Navigation Bar (unchanged core logic, but styles adjusted to match source)
 class _MainBottomNav extends StatelessWidget {
   const _MainBottomNav();
 
@@ -316,7 +362,7 @@ class _MainBottomNav extends StatelessWidget {
     return BottomNavigationBar(
       backgroundColor: Colors.black,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF8B80F9), // Purple accent
+      selectedItemColor: const Color(0xFF8B80F9),
       unselectedItemColor: Colors.grey,
       currentIndex: _currentIndex(context),
       onTap: (index) => _onTap(context, index),
@@ -337,7 +383,6 @@ class _MainBottomNav extends StatelessWidget {
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-
     if (location.startsWith('/search')) return 1;
     if (location.startsWith('/library')) return 2;
     if (location.startsWith('/profile')) return 3;

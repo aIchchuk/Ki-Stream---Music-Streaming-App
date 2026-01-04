@@ -5,6 +5,7 @@ import '../../data/models/song_model.dart';
 import '../../../shared/widgets/song_image.dart';
 import '../bloc/player_bloc.dart';
 import '../bloc/song_bloc.dart';
+import '../bloc/downloads_bloc.dart';
 
 class PlayerPage extends StatelessWidget {
   final SongModel song;
@@ -278,10 +279,39 @@ class PlayerPage extends StatelessWidget {
                           onPressed: () =>
                               context.read<PlayerBloc>().add(PlayNext()),
                         ),
-                        const Icon(
-                          Icons.download,
-                          color: Color(0xFF8B80F9),
-                          size: 22,
+                        // Download Icon
+                        BlocBuilder<DownloadsBloc, DownloadsState>(
+                          builder: (context, downloadsState) {
+                            bool isDownloaded = false;
+                            if (downloadsState is DownloadsLoaded) {
+                              isDownloaded = downloadsState.songs.any(
+                                (s) => s.id == currentSong.id,
+                              );
+                            }
+
+                            return IconButton(
+                              icon: Icon(
+                                isDownloaded
+                                    ? Icons.check_circle
+                                    : Icons.download_for_offline_outlined,
+                                color: isDownloaded
+                                    ? const Color(0xFF8B80F9)
+                                    : Colors.grey,
+                                size: 26,
+                              ),
+                              onPressed: () {
+                                if (isDownloaded) {
+                                  context.read<DownloadsBloc>().add(
+                                    DeleteDownloadedSong(currentSong.id),
+                                  );
+                                } else {
+                                  context.read<DownloadsBloc>().add(
+                                    DownloadSong(currentSong),
+                                  );
+                                }
+                              },
+                            );
+                          },
                         ),
                       ],
                     ),

@@ -7,6 +7,7 @@ abstract class AuthLocalDataSource {
   Future<void> deleteUser();
   Future<List<UserModel>> getAllCachedUsers();
   Future<void> cacheUsers(List<UserModel> users);
+  Future<void> deleteCachedUser(String id);
   Future<void> clearCache();
 }
 
@@ -37,6 +38,8 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     for (var value in usersDbBox.values) {
       if (value is Map) {
         users.add(UserModel.fromJson(Map<String, dynamic>.from(value)));
+      } else if (value is UserModel) {
+        users.add(value);
       }
     }
     return users;
@@ -45,9 +48,14 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   @override
   Future<void> cacheUsers(List<UserModel> users) async {
     final Map<String, dynamic> userMap = {
-      for (var user in users) user.email: user.toJson(),
+      for (var user in users) user.id: user.toJson(),
     };
     await usersDbBox.putAll(userMap);
+  }
+
+  @override
+  Future<void> deleteCachedUser(String id) async {
+    await usersDbBox.delete(id);
   }
 
   @override

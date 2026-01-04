@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -33,16 +37,14 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final GoogleSignInAccount? account = await _googleSignIn.signIn();
       if (account != null) {
-        final user = UserModel(
+        UserModel user = UserModel(
           id: account.id,
           email: account.email,
           displayName: account.displayName ?? 'User',
           photoUrl: account.photoUrl,
         );
 
-        // In a real app, we would also verify this user with our server
-        // and get the server-side user object (with ID, etc.)
-        // For now, following the pattern of caching after success.
+        user = await _downloadAndCacheProfileImage(user);
 
         await localDataSource.cacheUser(user);
         return user;
@@ -57,7 +59,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserModel?> signIn(String email, String password) async {
     await _ensureServerRunning();
     // Must go through server first
-    final user = await remoteDataSource.signIn(email, password);
+    UserModel user = await remoteDataSource.signIn(email, password);
+    // Download and cache image for offline
+    user = await _downloadAndCacheProfileImage(user);
     // On success, cache user
     await localDataSource.cacheUser(user);
     return user;
@@ -67,7 +71,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserModel?> signUp(String email, String password, String name) async {
     await _ensureServerRunning();
     // Must go through server first
-    final user = await remoteDataSource.signUp(email, password, name);
+    UserModel user = await remoteDataSource.signUp(email, password, name);
+    // Download and cache image for offline
+    user = await _downloadAndCacheProfileImage(user);
     // On success, cache user
     await localDataSource.cacheUser(user);
     return user;
@@ -99,7 +105,9 @@ class AuthRepositoryImpl implements AuthRepository {
       await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(photoUrl: path);
       // Update on server first
-      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      UserModel savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Download and cache image for offline
+      savedUser = await _downloadAndCacheProfileImage(savedUser);
       // Update local cache
       await localDataSource.cacheUser(savedUser);
     }
@@ -112,7 +120,9 @@ class AuthRepositoryImpl implements AuthRepository {
       await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(email: newEmail);
       // Update on server first
-      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      UserModel savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Download and cache image for offline
+      savedUser = await _downloadAndCacheProfileImage(savedUser);
       // Update local cache
       await localDataSource.cacheUser(savedUser);
     }
@@ -125,7 +135,9 @@ class AuthRepositoryImpl implements AuthRepository {
       await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(password: newPassword);
       // Update on server first
-      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      UserModel savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Download and cache image for offline
+      savedUser = await _downloadAndCacheProfileImage(savedUser);
       // Update local cache
       await localDataSource.cacheUser(savedUser);
     }
@@ -138,7 +150,9 @@ class AuthRepositoryImpl implements AuthRepository {
       await _ensureServerRunning();
       final updatedUser = currentUser.copyWith(displayName: newName);
       // Update on server first
-      final savedUser = await remoteDataSource.updateProfile(updatedUser);
+      UserModel savedUser = await remoteDataSource.updateProfile(updatedUser);
+      // Download and cache image for offline
+      savedUser = await _downloadAndCacheProfileImage(savedUser);
       // Update local cache
       await localDataSource.cacheUser(savedUser);
     }
@@ -169,7 +183,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> _syncUsers() async {
     try {
       final remoteUsers = await remoteDataSource.getAllUsers();
-      await localDataSource.cacheUsers(remoteUsers);
+      final List<UserModel> updatedUsers = [];
+      for (var user in remoteUsers) {
+        final updatedUser = await _downloadAndCacheProfileImage(user);
+        updatedUsers.add(updatedUser);
+      }
+      await localDataSource.cacheUsers(updatedUsers);
     } catch (e) {
       // Handle sync error
     }
@@ -180,12 +199,41 @@ class AuthRepositoryImpl implements AuthRepository {
     await _ensureServerRunning();
     // Delete from server first
     await remoteDataSource.deleteUser(id);
-    // No specific local delete for a specific user in library yet,
-    // but the next sync will handle it.
+    // Sync local cache
+    await localDataSource.deleteCachedUser(id);
   }
 
   @override
   Future<void> clearLocalCache() async {
     await localDataSource.clearCache();
+  }
+
+  Future<UserModel> _downloadAndCacheProfileImage(UserModel user) async {
+    if (user.photoUrl == null ||
+        user.photoUrl!.isEmpty ||
+        !user.photoUrl!.startsWith('http')) {
+      return user;
+    }
+
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final profileDir = Directory(p.join(appDir.path, 'profile'));
+      if (!await profileDir.exists()) {
+        await profileDir.create(recursive: true);
+      }
+
+      final fileName =
+          'profile_${user.id}${p.extension(user.photoUrl!.split('?').first)}';
+      final localFile = File(p.join(profileDir.path, fileName));
+
+      final response = await http.get(Uri.parse(user.photoUrl!));
+      if (response.statusCode == 200) {
+        await localFile.writeAsBytes(response.bodyBytes);
+        return user.copyWith(photoUrl: localFile.path);
+      }
+    } catch (e) {
+      print('Error downloading profile image: $e');
+    }
+    return user;
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_constants.dart';
@@ -15,19 +16,27 @@ abstract class AuthRemoteDataSource {
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final http.Client client;
   final String baseUrl = ApiConstants.baseUrl;
+  final String baseStaticUrl = ApiConstants.baseStaticUrl;
 
   AuthRemoteDataSourceImpl({required this.client});
+
+  String _resolveAssetUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http')) return path;
+    return '$baseStaticUrl/$path';
+  }
 
   @override
   Future<UserModel> signIn(String email, String password) async {
     final response = await client.post(
-      Uri.parse('$baseUrl/users/login'), // Assuming a login route exists
+      Uri.parse('$baseUrl/users/login'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'email': email, 'password': password}),
     );
 
     if (response.statusCode == 200) {
-      return UserModel.fromJson(json.decode(response.body));
+      final user = UserModel.fromJson(json.decode(response.body));
+      return user.copyWith(photoUrl: _resolveAssetUrl(user.photoUrl));
     } else {
       final error = json.decode(response.body)['message'] ?? 'Login failed';
       throw Exception(error);
@@ -47,7 +56,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
-      return UserModel.fromJson(json.decode(response.body));
+      final user = UserModel.fromJson(json.decode(response.body));
+      return user.copyWith(photoUrl: _resolveAssetUrl(user.photoUrl));
     } else {
       final error = json.decode(response.body)['message'] ?? 'Signup failed';
       throw Exception(error);
@@ -69,7 +79,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     if (response.statusCode == 200) {
       final List decoded = json.decode(response.body);
-      return decoded.map((item) => UserModel.fromJson(item)).toList();
+      return decoded.map((item) {
+        final user = UserModel.fromJson(item);
+        return user.copyWith(photoUrl: _resolveAssetUrl(user.photoUrl));
+      }).toList();
     } else {
       throw Exception('Failed to load users');
     }
@@ -86,14 +99,36 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel> updateProfile(UserModel user) async {
-    final response = await client.put(
-      Uri.parse('$baseUrl/users/${user.id}'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(user.toJson()),
-    );
+    final uri = Uri.parse('$baseUrl/users/${user.id}');
+    final request = http.MultipartRequest('PUT', uri);
+
+    request.fields['fullName'] = user.displayName;
+    request.fields['email'] = user.email;
+    if (user.password != null) {
+      request.fields['password'] = user.password!;
+    }
+
+    if (user.photoUrl != null &&
+        user.photoUrl!.isNotEmpty &&
+        !user.photoUrl!.startsWith('http')) {
+      final file = File(user.photoUrl!);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('userImageUrl', file.path),
+        );
+      } else {
+        request.fields['userImageUrl'] = user.photoUrl!;
+      }
+    } else if (user.photoUrl != null) {
+      request.fields['userImageUrl'] = user.photoUrl!;
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
-      return UserModel.fromJson(json.decode(response.body));
+      final user = UserModel.fromJson(json.decode(response.body));
+      return user.copyWith(photoUrl: _resolveAssetUrl(user.photoUrl));
     } else {
       throw Exception('Failed to update profile');
     }

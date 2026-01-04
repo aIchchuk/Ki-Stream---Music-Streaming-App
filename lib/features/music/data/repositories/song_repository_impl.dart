@@ -1,3 +1,7 @@
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../datasources/music_local_data_source.dart';
 import '../datasources/music_remote_data_source.dart';
 import '../../../../core/network/server_health_data_source.dart';
@@ -26,12 +30,8 @@ class SongRepositoryImpl implements SongRepository {
 
   @override
   Future<List<SongModel>> getSongs() async {
-    // Return cached data immediately if available
     final localSongs = await localDataSource.getCachedSongs();
-
-    // Trigger background sync
     _syncSongs();
-
     return localSongs;
   }
 
@@ -40,54 +40,82 @@ class SongRepositoryImpl implements SongRepository {
       final remoteSongs = await remoteDataSource.getAllSongs();
       await localDataSource.cacheSongs(remoteSongs);
     } catch (e) {
-      // Log error or handle silently for background sync
+      // Background sync failed
     }
   }
 
   @override
   Future<void> addSong(SongModel song) async {
     await _ensureServerRunning();
-    // Must be executed on the server first
-    final createdSong = await remoteDataSource.createSong(song);
-    // After success, update Hive
-    await localDataSource.cacheSong(createdSong);
+    await remoteDataSource.createSong(song);
   }
 
   @override
   Future<void> deleteSong(String id) async {
     await _ensureServerRunning();
-    // Must be executed on the server first
     await remoteDataSource.deleteSong(id);
-    // After success, remove from Hive
     await localDataSource.deleteCachedSong(id);
   }
 
   @override
   Future<void> toggleFavorite(SongModel song) async {
     await _ensureServerRunning();
-    // Favorites are currently local-only in the old implementation,
-    // but the new rules say ALL CRUD must go through server.
-    // However, the server model might not have 'isFavorite'.
-    // Let's assume for now we update it on the server if possible,
-    // or at least follow the pattern of "Remote first".
+    final updatedSong = song.copyWith(isFavorite: !(song.isFavorite ?? false));
+    final savedSong = await remoteDataSource.updateSong(updatedSong);
+    await localDataSource.cacheSong(savedSong);
+  }
 
-    // If the server handles it, we should have an endpoint.
-    // Since I don't see a specific 'toggleFavorite' route,
-    // I'll use the generic 'updateSong' if it exists or create it.
+  @override
+  Future<List<SongModel>> getDownloadedSongs() async {
+    return localDataSource.getDownloadedSongs();
+  }
 
-    // final updatedSong = song.copyWith(isFavorite: !(song.isFavorite ?? false));
+  @override
+  Future<void> downloadSong(SongModel song) async {
+    await _ensureServerRunning();
 
-    // For now, let's treat it as a generic update if server supports it.
-    // If not, we might need a specific endpoint.
-    // I saw `router.put('/:id', songController.updateSongById);` in song.routes.js
+    final appDir = await getApplicationDocumentsDirectory();
+    final downloadsDir = Directory(p.join(appDir.path, 'downloads'));
+    if (!await downloadsDir.exists()) {
+      await downloadsDir.create(recursive: true);
+    }
 
-    // await remoteDataSource.updateSong(updatedSong); // Need to add this to DataSource
-    // await localDataSource.cacheSong(updatedSong);
+    final songDir = Directory(p.join(downloadsDir.path, song.id));
+    if (!await songDir.exists()) {
+      await songDir.create(recursive: true);
+    }
 
-    // For the sake of following rules strictly:
-    throw UnimplementedError(
-      'Favorite toggling must be implemented on the server first.',
+    // Download audio
+    final audioFile = File(
+      p.join(songDir.path, 'audio${p.extension(song.audioFile)}'),
     );
+    final audioResp = await http.get(Uri.parse(song.audioFile));
+    await audioFile.writeAsBytes(audioResp.bodyBytes);
+
+    // Download image
+    final imageFile = File(
+      p.join(songDir.path, 'image${p.extension(song.songImage)}'),
+    );
+    final imageResp = await http.get(Uri.parse(song.songImage));
+    await imageFile.writeAsBytes(imageResp.bodyBytes);
+
+    final downloadedSong = song.copyWith(
+      audioFile: audioFile.path,
+      songImage: imageFile.path,
+      isDownloaded: true,
+    );
+
+    await localDataSource.saveDownloadedSong(downloadedSong);
+  }
+
+  @override
+  Future<void> deleteDownloadedSong(String id) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final songDir = Directory(p.join(appDir.path, 'downloads', id));
+    if (await songDir.exists()) {
+      await songDir.delete(recursive: true);
+    }
+    await localDataSource.deleteDownloadedSong(id);
   }
 
   @override

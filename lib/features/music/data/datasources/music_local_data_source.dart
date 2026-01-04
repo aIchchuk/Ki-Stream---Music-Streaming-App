@@ -8,6 +8,10 @@ abstract class MusicLocalDataSource {
   Future<void> cacheSong(SongModel song);
   Future<void> deleteCachedSong(String id);
 
+  Future<List<SongModel>> getDownloadedSongs();
+  Future<void> saveDownloadedSong(SongModel song);
+  Future<void> deleteDownloadedSong(String id);
+
   Future<List<PlaylistModel>> getCachedPlaylists();
   Future<void> cachePlaylists(List<PlaylistModel> playlists);
   Future<void> cachePlaylist(PlaylistModel playlist);
@@ -17,9 +21,14 @@ abstract class MusicLocalDataSource {
 
 class MusicLocalDataSourceImpl implements MusicLocalDataSource {
   final Box<SongModel> songBox;
+  final Box<SongModel> downloadedSongsBox;
   final Box<PlaylistModel> playlistBox;
 
-  MusicLocalDataSourceImpl({required this.songBox, required this.playlistBox});
+  MusicLocalDataSourceImpl({
+    required this.songBox,
+    required this.downloadedSongsBox,
+    required this.playlistBox,
+  });
 
   @override
   Future<List<SongModel>> getCachedSongs() async {
@@ -42,6 +51,21 @@ class MusicLocalDataSourceImpl implements MusicLocalDataSource {
   @override
   Future<void> deleteCachedSong(String id) async {
     await songBox.delete(id);
+  }
+
+  @override
+  Future<List<SongModel>> getDownloadedSongs() async {
+    return downloadedSongsBox.values.toList();
+  }
+
+  @override
+  Future<void> saveDownloadedSong(SongModel song) async {
+    await downloadedSongsBox.put(song.id, song);
+  }
+
+  @override
+  Future<void> deleteDownloadedSong(String id) async {
+    await downloadedSongsBox.delete(id);
   }
 
   @override
@@ -70,6 +94,7 @@ class MusicLocalDataSourceImpl implements MusicLocalDataSource {
   @override
   Future<void> clearCache() async {
     await songBox.clear();
+    await downloadedSongsBox.clear();
     await playlistBox.clear();
   }
 }

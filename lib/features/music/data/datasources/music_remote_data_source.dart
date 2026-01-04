@@ -9,6 +9,7 @@ abstract class MusicRemoteDataSource {
   Future<List<SongModel>> getAllSongs();
   Future<SongModel> createSong(SongModel song);
   Future<void> deleteSong(String id);
+  Future<SongModel> updateSong(SongModel song);
 
   Future<List<PlaylistModel>> getAllPlaylists();
   Future<PlaylistModel> createPlaylist(PlaylistModel playlist);
@@ -100,6 +101,59 @@ class MusicRemoteDataSourceImpl implements MusicRemoteDataSource {
       );
     } else {
       throw Exception('Failed to create song: ${response.body}');
+    }
+  }
+
+  @override
+  Future<SongModel> updateSong(SongModel song) async {
+    final uri = Uri.parse('$baseUrl/songs/${song.id}');
+    final request = http.MultipartRequest('PUT', uri);
+
+    request.fields['songName'] = song.songName;
+    request.fields['artistName'] = song.artistName;
+    request.fields['albumName'] = song.albumName ?? '';
+    request.fields['isManual'] = (song.isManual ?? false).toString();
+    request.fields['isFavorite'] = (song.isFavorite ?? false).toString();
+
+    // Handle song image
+    if (song.songImage.isNotEmpty && !song.songImage.startsWith('http')) {
+      final file = File(song.songImage);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('songImage', file.path),
+        );
+      } else {
+        request.fields['songImage'] = song.songImage;
+      }
+    } else {
+      request.fields['songImage'] = song.songImage;
+    }
+
+    // Handle audio file
+    if (song.audioFile.isNotEmpty && !song.audioFile.startsWith('http')) {
+      final file = File(song.audioFile);
+      if (await file.exists()) {
+        request.files.add(
+          await http.MultipartFile.fromPath('audioFile', file.path),
+        );
+      } else {
+        request.fields['audioFile'] = song.audioFile;
+      }
+    } else {
+      request.fields['audioFile'] = song.audioFile;
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      final song = SongModel.fromJson(json.decode(response.body));
+      return song.copyWith(
+        songImage: _resolveAssetUrl(song.songImage),
+        audioFile: _resolveAssetUrl(song.audioFile),
+      );
+    } else {
+      throw Exception('Failed to update song: ${response.body}');
     }
   }
 

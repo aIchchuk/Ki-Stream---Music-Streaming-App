@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:get_it/get_it.dart';
+import '../../../../core/network/server_health_data_source.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
-import '../../../shared/widgets/song_image.dart';
+import '../../../music/presentation/bloc/downloads_bloc.dart';
+import '../../../music/data/models/song_model.dart';
+import '../../../shared/widgets/song_list_tile.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -14,10 +18,22 @@ class LibraryPage extends StatefulWidget {
 }
 
 class _LibraryPageState extends State<LibraryPage> {
+  bool isServerOnline = true;
+
   @override
   void initState() {
     super.initState();
+    _checkServerStatus();
     context.read<SongBloc>().add(LoadSongs());
+  }
+
+  Future<void> _checkServerStatus() async {
+    final status = await GetIt.I<ServerHealthDataSource>().isServerRunning();
+    if (mounted) {
+      setState(() {
+        isServerOnline = status;
+      });
+    }
   }
 
   @override
@@ -47,10 +63,11 @@ class _LibraryPageState extends State<LibraryPage> {
                   _buildQuickAction(
                     icon: Icons.file_download_outlined,
                     label: "Downloads",
+                    onTap: () => context.push('/downloads'),
                   ),
                   _buildQuickAction(
                     icon: Icons.playlist_play_rounded,
-                    label: "Playlists",
+                    label: isServerOnline ? "Playlists" : "Playlists",
                     onTap: () => context.push('/playlists'),
                   ),
                   _buildQuickAction(
@@ -74,46 +91,73 @@ class _LibraryPageState extends State<LibraryPage> {
 
               // Recently Added List - Scrollable
               Expanded(
-                child: BlocBuilder<SongBloc, SongState>(
-                  builder: (context, state) {
-                    if (state is SongLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (state is SongLoaded) {
-                      final manualSongs = state.songs
-                          .where((s) => s.isManual == true)
-                          .toList();
-
-                      if (manualSongs.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            "No manual songs added yet.",
-                            style: TextStyle(color: Colors.grey),
+                child: !isServerOnline
+                    ? const Center(
+                        child: Text(
+                          "You are offline",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
-                        );
-                      }
+                        ),
+                      )
+                    : BlocBuilder<DownloadsBloc, DownloadsState>(
+                        builder: (context, downloadsState) {
+                          return BlocBuilder<SongBloc, SongState>(
+                            builder: (context, state) {
+                              if (state is SongLoading) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              } else if (state is SongLoaded) {
+                                List<SongModel> manualSongs = state.songs
+                                    .where((s) => s.isManual == true)
+                                    .toList();
 
-                      return ListView.builder(
-                        itemCount: manualSongs.length,
-                        physics: const BouncingScrollPhysics(),
-                        itemBuilder: (context, index) {
-                          final song = manualSongs[index];
-                          return _buildRecentlyStreamedItem(
-                            image: song.songImage,
-                            title: song.songName,
-                            artist: song.artistName,
-                            onTap: () {
-                              context.read<PlayerBloc>().add(
-                                PlaySong(song, queue: manualSongs),
-                              );
-                              context.push('/player', extra: song);
+                                if (isServerOnline &&
+                                    downloadsState is DownloadsLoaded) {
+                                  final loadedSongs = downloadsState.songs;
+                                  // Filter out songs that are already downloaded when online
+                                  manualSongs = manualSongs.where((song) {
+                                    return !loadedSongs.any(
+                                      (s) => s.id == song.id,
+                                    );
+                                  }).toList();
+                                }
+
+                                if (manualSongs.isEmpty) {
+                                  return const Center(
+                                    child: Text(
+                                      "No manual songs added yet.",
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  );
+                                }
+
+                                return ListView.builder(
+                                  itemCount: manualSongs.length,
+                                  physics: const BouncingScrollPhysics(),
+                                  itemBuilder: (context, index) {
+                                    final song = manualSongs[index];
+                                    return SongListTile(
+                                      song: song,
+                                      queue: manualSongs,
+                                      onTap: () {
+                                        context.read<PlayerBloc>().add(
+                                          PlaySong(song, queue: manualSongs),
+                                        );
+                                        context.push('/player', extra: song);
+                                      },
+                                    );
+                                  },
+                                );
+                              }
+                              return const SizedBox.shrink();
                             },
                           );
                         },
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
+                      ),
               ),
             ],
           ),
@@ -147,46 +191,6 @@ class _LibraryPageState extends State<LibraryPage> {
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentlyStreamedItem({
-    required String image,
-    required String title,
-    required String artist,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 25),
-        child: Row(
-          children: [
-            SongImage(imageUrl: image, width: 90, height: 90, borderRadius: 12),
-            const SizedBox(width: 25),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    artist,
-                    style: const TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
               ),
             ),
           ],

@@ -16,6 +16,7 @@ import '../../features/music/data/models/playlist_model.dart';
 import '../../features/music/domain/repositories/playlist_repository.dart';
 import '../../features/music/data/repositories/playlist_repository_impl.dart';
 import '../../features/music/presentation/bloc/playlist_bloc/playlist_bloc.dart';
+import '../../features/music/presentation/bloc/downloads_bloc.dart';
 
 // Data Sources
 import '../../features/auth/data/datasources/auth_local_data_source.dart';
@@ -38,10 +39,11 @@ Future<void> init() async {
   final userBox = await Hive.openBox<UserModel>('user');
   final usersDbBox = await Hive.openBox('users_db');
   final songsBox = await Hive.openBox<SongModel>('songs');
+  final downloadedSongsBox = await Hive.openBox<SongModel>('downloaded_songs');
   final playlistsBox = await Hive.openBox<PlaylistModel>('playlists');
 
   debugPrint(
-    'Hive Boxes opened. Session: ${userBox.length}, DB Users: ${usersDbBox.length}, Playlists: ${playlistsBox.length}',
+    'Hive Boxes opened. Session: ${userBox.length}, DB Users: ${usersDbBox.length}, Playlists: ${playlistsBox.length}, Downloaded Songs: ${downloadedSongsBox.length}',
   );
 
   // External
@@ -58,8 +60,11 @@ Future<void> init() async {
     () => AuthRemoteDataSourceImpl(client: sl()),
   );
   sl.registerLazySingleton<MusicLocalDataSource>(
-    () =>
-        MusicLocalDataSourceImpl(songBox: songsBox, playlistBox: playlistsBox),
+    () => MusicLocalDataSourceImpl(
+      songBox: songsBox,
+      downloadedSongsBox: downloadedSongsBox,
+      playlistBox: playlistsBox,
+    ),
   );
   sl.registerLazySingleton<MusicRemoteDataSource>(
     () => MusicRemoteDataSourceImpl(client: sl()),
@@ -97,4 +102,5 @@ Future<void> init() async {
   sl.registerFactory(() => SongBloc(sl()));
   sl.registerFactory(() => PlayerBloc());
   sl.registerFactory(() => PlaylistBloc(sl()));
+  sl.registerFactory(() => DownloadsBloc(sl()));
 }

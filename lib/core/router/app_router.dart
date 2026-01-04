@@ -17,6 +17,8 @@ import '../../features/library/presentation/pages/playlists_page.dart';
 import '../../features/search/presentation/pages/search_page.dart';
 import '../../features/music/data/models/song_model.dart';
 
+import '../../features/library/presentation/pages/downloads_page.dart';
+
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>();
@@ -58,6 +60,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/favorites',
           builder: (context, state) => const FavoritesPage(),
+        ),
+        GoRoute(
+          path: '/downloads',
+          builder: (context, state) => const DownloadsPage(),
         ),
         GoRoute(
           path: '/admin-dashboard',

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
+const upload = require('../middleware/upload.middleware');
 
 // GET /api/users - Get all users
 router.get('/', userController.getAllUsers);
@@ -15,7 +16,7 @@ router.post('/', userController.createUser);
 router.post('/login', userController.loginUser);
 
 // PUT /api/users/:id - Update a user
-router.put('/:id', userController.updateUser);
+router.put('/:id', upload.single('userImageUrl'), userController.updateUser);
 
 // DELETE /api/users/:id - Delete a user
 router.delete('/:id', userController.deleteUser);
