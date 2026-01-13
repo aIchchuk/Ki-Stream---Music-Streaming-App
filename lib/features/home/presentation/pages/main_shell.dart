@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,6 +10,7 @@ import 'package:get_it/get_it.dart';
 import '../../../music/data/models/song_model.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
 import '../../../../core/network/server_health_data_source.dart';
+import '../../../../core/widgets/dynamic_background.dart';
 
 /// MainShell widget with dismissible MiniPlayer and route-aware hiding
 class MainShell extends StatefulWidget {
@@ -64,63 +66,66 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final hideForPlayerPage = _isPlayerRoute(context);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          if (!_isServerRunning)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              color: Colors.redAccent,
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.cloud_off, size: 14, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text(
-                    "Offline Mode (Read-only)",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(child: widget.child),
-        ],
-      ),
-      bottomNavigationBar: BlocListener<PlayerBloc, PlayerState>(
-        listener: (context, state) {
-          if (state is PlayerPlaying) {
-            setState(() {
-              _miniPlayerDismissed = false;
-            });
-          }
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return DynamicBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
           children: [
-            if (!hideForPlayerPage)
-              BlocSelector<PlayerBloc, PlayerState, PlayerState>(
-                selector: (state) => state,
-                builder: (context, state) {
-                  final showMiniPlayer = state is PlayerPlaying;
-
-                  if (!showMiniPlayer || _miniPlayerDismissed) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return DismissibleMiniPlayer(
-                    song: state.song,
-                    isPlaying: state.isPlaying,
-                    onDismissed: _onDismissed,
-                  );
-                },
+            if (!_isServerRunning)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                color: Colors.redAccent,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_off, size: 14, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Offline Mode (Read-only)",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            const _MainBottomNav(),
+            Expanded(child: widget.child),
           ],
+        ),
+        bottomNavigationBar: BlocListener<PlayerBloc, PlayerState>(
+          listener: (context, state) {
+            if (state is PlayerPlaying) {
+              setState(() {
+                _miniPlayerDismissed = false;
+              });
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!hideForPlayerPage)
+                BlocSelector<PlayerBloc, PlayerState, PlayerState>(
+                  selector: (state) => state,
+                  builder: (context, state) {
+                    final showMiniPlayer = state is PlayerPlaying;
+
+                    if (!showMiniPlayer || _miniPlayerDismissed) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return DismissibleMiniPlayer(
+                      song: state.song,
+                      isPlaying: state.isPlaying,
+                      onDismissed: _onDismissed,
+                    );
+                  },
+                ),
+              const _MainBottomNav(),
+            ],
+          ),
         ),
       ),
     );
@@ -210,71 +215,115 @@ class MiniPlayer extends StatelessWidget {
             margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF1E1E1E).withValues(alpha: 0.8),
+                  const Color(0xFF121212).withValues(alpha: 0.6),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 0.5,
+              ),
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black45,
-                  blurRadius: 16,
-                  offset: Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: _buildMiniPlayerImage(song.songImage),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Row(
                     children: [
-                      Text(
-                        song.songName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _buildMiniPlayerImage(song.songImage),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              song.songName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              song.artistName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        song.artistName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 12,
+                      // Lustrous Play Button
+                      GestureDetector(
+                        onTap: () {
+                          context.read<PlayerBloc>().add(TogglePlay());
+                        },
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF8B80F9).withValues(alpha: 0.9),
+                                const Color(0xFF6B60D9).withValues(alpha: 0.7),
+                              ],
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF8B80F9,
+                                ).withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                    ),
-                    onPressed: () {
-                      context.read<PlayerBloc>().add(TogglePlay());
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           Positioned(
@@ -359,25 +408,34 @@ class _MainBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      backgroundColor: Colors.black,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF8B80F9),
-      unselectedItemColor: Colors.grey,
-      currentIndex: _currentIndex(context),
-      onTap: (index) => _onTap(context, index),
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark_outline),
-          label: 'Library',
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.black.withValues(alpha: 0.1),
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF8B80F9),
+          unselectedItemColor: Colors.grey,
+          currentIndex: _currentIndex(context),
+          onTap: (index) => _onTap(context, index),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bookmark_outline),
+              label: 'Library',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              label: 'Profile',
+            ),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
+      ),
     );
   }
 

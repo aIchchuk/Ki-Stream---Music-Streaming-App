@@ -1,9 +1,9 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
-import 'package:kistream/core/theme/app_theme.dart';
 import 'package:kistream/core/network/server_health_data_source.dart';
 import 'package:kistream/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:kistream/features/auth/data/models/user_model.dart';
@@ -47,7 +47,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
@@ -497,18 +497,57 @@ class _HomePageState extends State<HomePage> {
                                   }
                                 }
                               },
-                              child: Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryColor,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  isPlaylistPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 24,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(25),
+                                child: BackdropFilter(
+                                  filter: ui.ImageFilter.blur(
+                                    sigmaX: 8,
+                                    sigmaY: 8,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          const Color(
+                                            0xFF8B80F9,
+                                          ).withValues(alpha: 0.9),
+                                          const Color(
+                                            0xFF6B60D9,
+                                          ).withValues(alpha: 0.7),
+                                        ],
+                                      ),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        width: 1,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: isPlaylistPlaying
+                                              ? const Color(
+                                                  0xFF8B80F9,
+                                                ).withValues(alpha: 0.5)
+                                              : Colors.black.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                          blurRadius: 12,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      isPlaylistPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -609,29 +648,39 @@ class _FeelingWidgetState extends State<FeelingWidget>
       onTap: () {
         context.go('/search');
       },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.search, color: Colors.grey),
-                  const SizedBox(width: 10),
-                  Text(
-                    "What do you want to listen to?",
-                    style: TextStyle(color: Colors.grey[400], fontSize: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.search, color: Colors.grey),
+                      const SizedBox(width: 10),
+                      Text(
+                        "What do you want to listen to?",
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

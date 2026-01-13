@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:kistream/core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/downloads_bloc.dart';
 import '../../../shared/widgets/song_list_tile.dart';
 
@@ -10,7 +9,7 @@ class DownloadsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text(
           "Downloads",

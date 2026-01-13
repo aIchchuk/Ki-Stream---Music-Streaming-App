@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/server_health_data_source.dart';
-import '../../../../core/theme/app_theme.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
 import '../../../music/presentation/bloc/player_bloc.dart';
 import '../../../shared/widgets/song_image.dart';
@@ -36,7 +35,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -136,7 +135,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                 ),
                                 Icon(
                                   Icons.favorite,
-                                  color: AppTheme.primaryColor,
+                                  color: Theme.of(context).primaryColor,
                                   size: 24,
                                 ),
                               ],
