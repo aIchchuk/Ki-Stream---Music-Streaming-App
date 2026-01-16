@@ -17,6 +17,12 @@ class DeletePlaylist extends PlaylistEvent {
   DeletePlaylist(this.id);
 }
 
+class AddSongToPlaylist extends PlaylistEvent {
+  final String playlistId;
+  final String songId;
+  AddSongToPlaylist({required this.playlistId, required this.songId});
+}
+
 // States
 abstract class PlaylistState {}
 
@@ -64,6 +70,18 @@ class PlaylistBloc extends Bloc<PlaylistEvent, PlaylistState> {
         add(LoadPlaylists());
       } catch (e) {
         emit(PlaylistError("Failed to delete playlist: $e"));
+      }
+    });
+
+    on<AddSongToPlaylist>((event, emit) async {
+      try {
+        await _playlistRepository.addSongToPlaylist(
+          event.playlistId,
+          event.songId,
+        );
+        add(LoadPlaylists()); // Refresh playlists to reflect changes
+      } catch (e) {
+        emit(PlaylistError("Failed to add song to playlist: $e"));
       }
     });
   }

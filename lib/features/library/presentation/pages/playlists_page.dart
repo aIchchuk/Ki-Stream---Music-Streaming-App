@@ -11,7 +11,6 @@ import 'package:kistream/features/music/presentation/bloc/song_bloc.dart';
 import 'package:kistream/features/music/presentation/bloc/player_bloc.dart';
 import 'package:kistream/features/shared/widgets/playing_highlight.dart';
 import 'package:kistream/features/shared/widgets/song_image.dart';
-import 'package:kistream/core/theme/app_theme.dart';
 
 class PlaylistsPage extends StatefulWidget {
   const PlaylistsPage({super.key});
@@ -151,23 +150,29 @@ class _PlaylistsPageState extends State<PlaylistsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-                width: 1,
-              ),
-            ),
-            child: InkWell(
-              onTap: () => context.push('/create-playlist'),
-              borderRadius: BorderRadius.circular(8),
-              child: Center(
-                child: Icon(
-                  Icons.add,
-                  color: Colors.white.withValues(alpha: 0.7),
-                  size: 50,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 1,
+                  ),
+                ),
+                child: InkWell(
+                  onTap: () => context.push('/create-playlist'),
+                  borderRadius: BorderRadius.circular(15),
+                  child: Center(
+                    child: Icon(
+                      Icons.add_rounded,
+                      color: Colors.white.withValues(alpha: 0.4),
+                      size: 50,
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -109,15 +109,39 @@ class _HomePageState extends State<HomePage> {
                           _buildSectionHeader(
                             context,
                             "Newly Added Songs",
-                            action: IconButton(
-                              icon: const Icon(
-                                Icons.playlist_add,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                              onPressed: () {
+                            action: GestureDetector(
+                              onTap: () {
                                 context.push('/add-song');
                               },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: BackdropFilter(
+                                  filter: ui.ImageFilter.blur(
+                                    sigmaX: 8,
+                                    sigmaY: 8,
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.08,
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.playlist_add,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 15),
@@ -656,10 +680,10 @@ class _FeelingWidgetState extends State<FeelingWidget>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.35),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withValues(alpha: 0.05),
                 width: 1,
               ),
             ),

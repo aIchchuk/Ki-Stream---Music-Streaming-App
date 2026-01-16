@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:get_it/get_it.dart';
 import '../../../../core/network/server_health_data_source.dart';
 import '../../../music/presentation/bloc/song_bloc.dart';
-import '../../../music/presentation/bloc/player_bloc.dart';
 import '../../../music/presentation/bloc/downloads_bloc.dart';
 import '../../../music/data/models/song_model.dart';
 import '../../../shared/widgets/song_list_tile.dart';
@@ -143,12 +142,6 @@ class _LibraryPageState extends State<LibraryPage> {
                                     return SongListTile(
                                       song: song,
                                       queue: manualSongs,
-                                      onTap: () {
-                                        context.read<PlayerBloc>().add(
-                                          PlaySong(song, queue: manualSongs),
-                                        );
-                                        context.push('/player', extra: song);
-                                      },
                                     );
                                   },
                                 );
